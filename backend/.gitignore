@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Google OAuth cached credentials - never commit
+tokens/
