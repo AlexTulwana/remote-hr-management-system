@@ -3,6 +3,8 @@ package com.wethinkcode.hrsystem.model;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "users")
 @Data
@@ -24,4 +26,7 @@ public class User {
     @OneToOne
     @JoinColumn(name = "employee_id")
     private Employee employee;
+
+    private String resetToken;
+    private LocalDateTime resetTokenExpiry;
 }
