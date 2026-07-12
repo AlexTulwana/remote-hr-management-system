@@ -34,3 +34,6 @@ build/
 
 # Google OAuth cached credentials - never commit
 tokens/
+
+# User-uploaded files - never commit
+uploads/

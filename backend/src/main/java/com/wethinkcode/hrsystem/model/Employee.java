@@ -24,6 +24,10 @@ public class Employee {
     private LocalDate employmentDate;
     private boolean active = true;
 
+    private Double salary;
+    private String payGrade;
+    private String bankingDetails;
+
     @ManyToOne
     @JoinColumn(name = "branch_id")
     private Branch branch;
