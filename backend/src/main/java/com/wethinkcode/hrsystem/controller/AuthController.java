@@ -43,4 +43,11 @@ public class AuthController {
         authService.resetPassword(request);
         return ResponseEntity.ok(Map.of("message", "Password reset successful"));
     }
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, String>> logout() {
+        // Stateless JWT: there's no server-side session to destroy.
+        // The actual logout happens on the frontend by deleting the stored token.
+        // This endpoint exists for API completeness and future audit logging.
+        return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
+    }
 }
