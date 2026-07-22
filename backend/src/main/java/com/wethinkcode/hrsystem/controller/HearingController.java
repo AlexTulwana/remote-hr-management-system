@@ -1,7 +1,9 @@
 package com.wethinkcode.hrsystem.controller;
 
 import com.wethinkcode.hrsystem.dto.HearingRequest;
+import com.wethinkcode.hrsystem.dto.HearingParticipantRequest;
 import com.wethinkcode.hrsystem.model.Hearing;
+import com.wethinkcode.hrsystem.model.HearingParticipant;
 import com.wethinkcode.hrsystem.service.HearingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -47,5 +49,15 @@ public class HearingController {
     @GetMapping
     public ResponseEntity<List<Hearing>> getAll() {
         return ResponseEntity.ok(hearingService.getAll());
+    }
+    @PostMapping("/{hearingId}/participants")
+    public ResponseEntity<HearingParticipant> addParticipant(
+            @PathVariable Long hearingId, @RequestBody HearingParticipantRequest request) {
+        return ResponseEntity.ok(hearingService.addParticipant(hearingId, request));
+    }
+
+    @GetMapping("/{hearingId}/participants")
+    public ResponseEntity<List<HearingParticipant>> getParticipants(@PathVariable Long hearingId) {
+        return ResponseEntity.ok(hearingService.getParticipants(hearingId));
     }
 }

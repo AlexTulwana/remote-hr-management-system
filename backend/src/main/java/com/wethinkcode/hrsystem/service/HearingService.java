@@ -1,10 +1,15 @@
 package com.wethinkcode.hrsystem.service;
 
 import com.wethinkcode.hrsystem.dto.HearingRequest;
+import com.wethinkcode.hrsystem.dto.HearingParticipantRequest;
 import com.wethinkcode.hrsystem.model.Employee;
 import com.wethinkcode.hrsystem.model.Hearing;
+import com.wethinkcode.hrsystem.model.HearingParticipant;
+import com.wethinkcode.hrsystem.model.User;
 import com.wethinkcode.hrsystem.repository.EmployeeRepository;
+import com.wethinkcode.hrsystem.repository.HearingParticipantRepository;
 import com.wethinkcode.hrsystem.repository.HearingRepository;
+import com.wethinkcode.hrsystem.repository.UserRepository;
 import com.wethinkcode.hrsystem.service.meeting.MeetingDetails;
 import com.wethinkcode.hrsystem.service.meeting.MeetingProvider;
 import com.wethinkcode.hrsystem.service.meeting.MeetingResult;
@@ -18,17 +23,20 @@ public class HearingService {
 
     private final HearingRepository hearingRepository;
     private final EmployeeRepository employeeRepository;
-
-    // Optional: if a MeetingProvider bean exists, it gets injected here.
-    // If none is configured, this stays null and we fall back to the manually pasted link.
     private final Optional<MeetingProvider> meetingProvider;
+    private final HearingParticipantRepository hearingParticipantRepository;
+    private final UserRepository userRepository;
 
     public HearingService(HearingRepository hearingRepository,
                           EmployeeRepository employeeRepository,
-                          Optional<MeetingProvider> meetingProvider) {
+                          Optional<MeetingProvider> meetingProvider,
+                          HearingParticipantRepository hearingParticipantRepository,
+                          UserRepository userRepository) {
         this.hearingRepository = hearingRepository;
         this.employeeRepository = employeeRepository;
         this.meetingProvider = meetingProvider;
+        this.hearingParticipantRepository = hearingParticipantRepository;
+        this.userRepository = userRepository;
     }
 
     public Hearing schedule(HearingRequest request) {
@@ -44,8 +52,6 @@ public class HearingService {
 
         String meetingLink = request.getMeetingLink();
 
-        // Stage 8c will populate meetingProvider with a real bean (Zoom/Google Meet).
-        // Until then, this block is dormant and we just use the manually pasted link.
         if (meetingProvider.isPresent() && (meetingLink == null || meetingLink.isBlank())) {
             MeetingDetails details = new MeetingDetails(
                     employee.getFullName(), request.getCaseType(), request.getHearingDateTime());
@@ -68,6 +74,23 @@ public class HearingService {
                 + ". Join link: " + hearing.getMeetingLink());
 
         return saved;
+    }
+
+    public HearingParticipant addParticipant(Long hearingId, HearingParticipantRequest request) {
+        Hearing hearing = getById(hearingId);
+        User person = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        HearingParticipant participant = new HearingParticipant();
+        participant.setHearing(hearing);
+        participant.setPerson(person);
+        participant.setRole(request.getRole());
+
+        return hearingParticipantRepository.save(participant);
+    }
+
+    public List<HearingParticipant> getParticipants(Long hearingId) {
+        return hearingParticipantRepository.findByHearingId(hearingId);
     }
 
     public Hearing updateOutcome(Long hearingId, String outcome, String notes) {
