@@ -4,6 +4,7 @@ import com.wethinkcode.hrsystem.dto.PerformanceReviewRequest;
 import com.wethinkcode.hrsystem.model.PerformanceReview;
 import com.wethinkcode.hrsystem.service.PerformanceReviewService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +19,7 @@ public class PerformanceReviewController {
         this.reviewService = reviewService;
     }
 
+    @PreAuthorize("hasRole('MANAGER') or hasRole('HR') or hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<PerformanceReview> create(@RequestBody PerformanceReviewRequest request) {
         return ResponseEntity.ok(reviewService.create(request));

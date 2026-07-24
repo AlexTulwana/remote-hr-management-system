@@ -4,6 +4,7 @@ import com.wethinkcode.hrsystem.dto.BranchRequest;
 import com.wethinkcode.hrsystem.model.Branch;
 import com.wethinkcode.hrsystem.service.BranchService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +19,7 @@ public class BranchController {
         this.branchService = branchService;
     }
 
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<Branch> create(@RequestBody BranchRequest request) {
         return ResponseEntity.ok(branchService.create(request));
@@ -33,11 +35,13 @@ public class BranchController {
         return ResponseEntity.ok(branchService.getById(id));
     }
 
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<Branch> update(@PathVariable Long id, @RequestBody BranchRequest request) {
         return ResponseEntity.ok(branchService.update(id, request));
     }
 
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         branchService.delete(id);

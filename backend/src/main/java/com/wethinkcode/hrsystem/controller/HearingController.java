@@ -7,6 +7,8 @@ import com.wethinkcode.hrsystem.model.HearingParticipant;
 import com.wethinkcode.hrsystem.service.HearingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+
 
 import java.util.List;
 import java.util.Map;
@@ -21,11 +23,12 @@ public class HearingController {
         this.hearingService = hearingService;
     }
 
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<Hearing> schedule(@RequestBody HearingRequest request) {
         return ResponseEntity.ok(hearingService.schedule(request));
     }
-
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PatchMapping("/{id}/outcome")
     public ResponseEntity<Hearing> updateOutcome(@PathVariable Long id, @RequestBody Map<String, String> body) {
         return ResponseEntity.ok(hearingService.updateOutcome(id, body.get("outcome"), body.get("notes")));

@@ -7,6 +7,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -40,12 +41,14 @@ public class AnnouncementController {
     }
 
     // PROTECTED - HR/Admin only, includes expired ones for management
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping("/all")
     public ResponseEntity<List<Announcement>> getAll() {
         return ResponseEntity.ok(announcementService.getAll());
     }
 
     // PROTECTED - HR/Admin only
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PostMapping(consumes = "multipart/form-data")
     public ResponseEntity<Announcement> create(
             @RequestParam String title,
@@ -68,6 +71,7 @@ public class AnnouncementController {
     }
 
     // PROTECTED - HR/Admin only
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         announcementService.delete(id);

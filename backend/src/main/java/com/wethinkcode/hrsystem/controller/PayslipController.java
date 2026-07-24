@@ -7,6 +7,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.access.prepost.PreAuthorize;
+
 
 import java.util.List;
 
@@ -19,7 +21,7 @@ public class PayslipController {
     public PayslipController(PayslipService payslipService) {
         this.payslipService = payslipService;
     }
-
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PostMapping(value = "/{employeeId}", consumes = "multipart/form-data")
     public ResponseEntity<Payslip> upload(
             @PathVariable Long employeeId,

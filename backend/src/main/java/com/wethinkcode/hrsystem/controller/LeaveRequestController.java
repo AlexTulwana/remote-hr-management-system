@@ -4,6 +4,7 @@ import com.wethinkcode.hrsystem.dto.LeaveRequestDto;
 import com.wethinkcode.hrsystem.model.LeaveRequest;
 import com.wethinkcode.hrsystem.service.LeaveRequestService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -38,11 +39,13 @@ public class LeaveRequestController {
         return ResponseEntity.ok(leaveRequestService.submit(employeeId, dto, attachment));
     }
 
+    @PreAuthorize("hasRole('MANAGER') or hasRole('HR') or hasRole('ADMIN')")
     @PatchMapping("/{leaveId}/approve")
     public ResponseEntity<LeaveRequest> approve(@PathVariable Long leaveId) {
         return ResponseEntity.ok(leaveRequestService.approve(leaveId));
     }
 
+    @PreAuthorize("hasRole('MANAGER') or hasRole('HR') or hasRole('ADMIN')")
     @PatchMapping("/{leaveId}/reject")
     public ResponseEntity<LeaveRequest> reject(@PathVariable Long leaveId, @RequestBody Map<String, String> body) {
         return ResponseEntity.ok(leaveRequestService.reject(leaveId, body.get("reason")));
