@@ -8,6 +8,9 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import com.wethinkcode.hrsystem.security.CurrentUserService;
+import org.springframework.security.access.AccessDeniedException;
+
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -25,10 +28,13 @@ public class PayslipService {
     private final PayslipRepository payslipRepository;
     private final EmployeeRepository employeeRepository;
     private final String uploadDir = "uploads/payslips/";
+    private final CurrentUserService currentUserService;
 
-    public PayslipService(PayslipRepository payslipRepository, EmployeeRepository employeeRepository) {
+
+    public PayslipService(PayslipRepository payslipRepository, EmployeeRepository employeeRepository, CurrentUserService currentUserService) {
         this.payslipRepository = payslipRepository;
         this.employeeRepository = employeeRepository;
+        this.currentUserService = currentUserService;
     }
 
     public Payslip upload(Long employeeId, String payPeriod, MultipartFile file) {
@@ -45,12 +51,27 @@ public class PayslipService {
     }
 
     public List<Payslip> getByEmployee(Long employeeId) {
+        String role = currentUserService.getCurrentUser().getRole();
+        if (!role.equals("HR") && !role.equals("ADMIN")) {
+            if (!currentUserService.isSelf(employeeId)) {
+                throw new AccessDeniedException("You are not authorized to view these payslips");
+            }
+        }
         return payslipRepository.findByEmployeeId(employeeId);
     }
 
     public Payslip getById(Long id) {
-        return payslipRepository.findById(id)
+        Payslip payslip = payslipRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Payslip not found"));
+
+        String role = currentUserService.getCurrentUser().getRole();
+        if (!role.equals("HR") && !role.equals("ADMIN")) {
+            if (!currentUserService.isSelf(payslip.getEmployee().getId())) {
+                throw new AccessDeniedException("You are not authorized to view this payslip");
+            }
+        }
+
+        return payslip;
     }
 
     public Resource downloadFile(Long payslipId) {
