@@ -23,6 +23,7 @@ public class Employee {
     private String contactDetails;
     private LocalDate employmentDate;
     private boolean active = true;
+    private String idNumber;
 
     private Double salary;
     private String payGrade;

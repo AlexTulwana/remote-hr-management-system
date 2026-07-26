@@ -35,8 +35,7 @@ public class AuthService {
     }
 
     public String login(LoginRequest request) {
-        User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("Invalid username or password"));
+        User user = findUserByAnyIdentifier(request.getUsername());
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid username or password");
@@ -45,9 +44,15 @@ public class AuthService {
         return jwtUtil.generateToken(user.getUsername(), user.getRole());
     }
 
+    private User findUserByAnyIdentifier(String identifier) {
+        return userRepository.findByUsername(identifier)
+                .or(() -> userRepository.findByEmployeeEmployeeNumber(identifier))
+                .or(() -> userRepository.findByEmployeeIdNumber(identifier))
+                .orElseThrow(() -> new RuntimeException("Invalid username or password"));
+    }
+
     public String forgotPassword(ForgotPasswordRequest request) {
-        User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = findUserByAnyIdentifier(request.getUsername());
 
         String token = UUID.randomUUID().toString();
         user.setResetToken(token);

@@ -47,4 +47,10 @@ public class EmployeeController {
         employeeService.deactivate(id);
         return ResponseEntity.noContent().build();
     }
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+    @PatchMapping("/{employeeId}/link-user/{userId}")
+    public ResponseEntity<Void> linkUser(@PathVariable Long employeeId, @PathVariable Long userId) {
+        employeeService.linkUserToEmployee(employeeId, userId);
+        return ResponseEntity.noContent().build();
+    }
 }

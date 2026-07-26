@@ -6,6 +6,9 @@ import com.wethinkcode.hrsystem.model.Employee;
 import com.wethinkcode.hrsystem.repository.BranchRepository;
 import com.wethinkcode.hrsystem.repository.EmployeeRepository;
 import org.springframework.stereotype.Service;
+import com.wethinkcode.hrsystem.model.User;
+import com.wethinkcode.hrsystem.repository.UserRepository;
+
 
 import java.util.List;
 
@@ -14,10 +17,12 @@ public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
     private final BranchRepository branchRepository;
+    private final UserRepository userRepository;
 
-    public EmployeeService(EmployeeRepository employeeRepository, BranchRepository branchRepository) {
+    public EmployeeService(EmployeeRepository employeeRepository, BranchRepository branchRepository, UserRepository userRepository) {
         this.employeeRepository = employeeRepository;
         this.branchRepository = branchRepository;
+        this.userRepository = userRepository;
     }
 
     public Employee create(EmployeeRequest request) {
@@ -39,6 +44,13 @@ public class EmployeeService {
         Employee employee = getById(id);
         mapRequestToEmployee(employee, request);
         return employeeRepository.save(employee);
+    }
+    public void linkUserToEmployee(Long employeeId, Long userId) {
+        Employee employee = getById(employeeId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setEmployee(employee);
+        userRepository.save(user);
     }
 
     public void deactivate(Long id) {
