@@ -7,6 +7,10 @@ import com.wethinkcode.hrsystem.repository.EmployeeRepository;
 import com.wethinkcode.hrsystem.repository.LeaveRequestRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import com.wethinkcode.hrsystem.security.CurrentUserService;
+import org.springframework.security.access.AccessDeniedException;
+
+
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -22,10 +26,13 @@ public class LeaveRequestService {
     private final LeaveRequestRepository leaveRequestRepository;
     private final EmployeeRepository employeeRepository;
     private final String uploadDir = "uploads/leave-attachments/";
+    private final CurrentUserService currentUserService;
 
-    public LeaveRequestService(LeaveRequestRepository leaveRequestRepository, EmployeeRepository employeeRepository) {
+
+    public LeaveRequestService(LeaveRequestRepository leaveRequestRepository, EmployeeRepository employeeRepository, CurrentUserService currentUserService) {
         this.leaveRequestRepository = leaveRequestRepository;
         this.employeeRepository = employeeRepository;
+        this.currentUserService = currentUserService;
     }
 
     public LeaveRequest submit(Long employeeId, LeaveRequestDto dto, MultipartFile attachment) {
@@ -66,15 +73,21 @@ public class LeaveRequestService {
     }
 
     public List<LeaveRequest> getByEmployee(Long employeeId) {
+        String role = currentUserService.getCurrentUser().getRole();
+        if (!role.equals("HR") && !role.equals("ADMIN")) {
+            if (!currentUserService.isSelf(employeeId)) {
+                throw new AccessDeniedException("You are not authorized to view these leave requests");
+            }
+        }
         return leaveRequestRepository.findByEmployeeId(employeeId);
-    }
-
-    public List<LeaveRequest> getByBranch(Long branchId) {
-        return leaveRequestRepository.findByEmployeeBranchId(branchId);
     }
 
     public List<LeaveRequest> getAll() {
         return leaveRequestRepository.findAll();
+    }
+
+    public List<LeaveRequest> getByBranch(Long branchId) {
+        return leaveRequestRepository.findByEmployeeBranchId(branchId);
     }
 
     private String saveAttachment(MultipartFile file) {
