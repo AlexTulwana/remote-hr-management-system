@@ -14,6 +14,10 @@ import com.wethinkcode.hrsystem.service.meeting.MeetingDetails;
 import com.wethinkcode.hrsystem.service.meeting.MeetingProvider;
 import com.wethinkcode.hrsystem.service.meeting.MeetingResult;
 import org.springframework.stereotype.Service;
+import com.wethinkcode.hrsystem.security.CurrentUserService;
+import org.springframework.security.access.AccessDeniedException;
+
+
 
 import java.util.List;
 import java.util.Optional;
@@ -26,17 +30,20 @@ public class HearingService {
     private final Optional<MeetingProvider> meetingProvider;
     private final HearingParticipantRepository hearingParticipantRepository;
     private final UserRepository userRepository;
+    private final com.wethinkcode.hrsystem.security.CurrentUserService currentUserService;
 
     public HearingService(HearingRepository hearingRepository,
                           EmployeeRepository employeeRepository,
                           Optional<MeetingProvider> meetingProvider,
                           HearingParticipantRepository hearingParticipantRepository,
-                          UserRepository userRepository) {
+                          UserRepository userRepository,
+                          CurrentUserService currentUserService) {
         this.hearingRepository = hearingRepository;
         this.employeeRepository = employeeRepository;
         this.meetingProvider = meetingProvider;
         this.hearingParticipantRepository = hearingParticipantRepository;
         this.userRepository = userRepository;
+        this.currentUserService = currentUserService;
     }
 
     public Hearing schedule(HearingRequest request) {
@@ -108,8 +115,17 @@ public class HearingService {
     }
 
     public Hearing getById(Long id) {
-        return hearingRepository.findById(id)
+        Hearing hearing = hearingRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Hearing not found"));
+
+        String role = currentUserService.getCurrentUser().getRole();
+        if (!role.equals("HR") && !role.equals("ADMIN")) {
+            if (!currentUserService.isSelf(hearing.getEmployee().getId())) {
+                throw new AccessDeniedException("You are not authorized to view this hearing");
+            }
+        }
+
+        return hearing;
     }
 
     public List<Hearing> getByEmployee(Long employeeId) {
