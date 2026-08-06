@@ -60,6 +60,11 @@ public class ApplicationController {
     public ResponseEntity<List<Application>> getByStatus(@PathVariable String status) {
         return ResponseEntity.ok(applicationService.getByStatus(status));
     }
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+    @GetMapping("/{id}")
+    public ResponseEntity<Application> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(applicationService.getById(id));
+    }
 
     // PROTECTED - HR/Admin only
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
