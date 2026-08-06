@@ -34,6 +34,26 @@ public class JobPostingService {
         posting.setEndDate(request.getEndDate());
         posting.setMaxApplications(request.getMaxApplications());
         posting.setPostedBy(postedBy);
+        if (request.getRequiredDocuments() != null) {
+            posting.setRequiredDocuments(request.getRequiredDocuments());
+        }
+
+        return jobPostingRepository.save(posting);
+    }
+
+    public JobPosting update(Long id, JobPostingRequest request) {
+        JobPosting posting = getById(id);
+
+        posting.setTitle(request.getTitle());
+        posting.setDescription(request.getDescription());
+        posting.setRequirements(request.getRequirements());
+        posting.setDepartment(request.getDepartment());
+        posting.setStartDate(request.getStartDate());
+        posting.setEndDate(request.getEndDate());
+        posting.setMaxApplications(request.getMaxApplications());
+        if (request.getRequiredDocuments() != null) {
+            posting.setRequiredDocuments(request.getRequiredDocuments());
+        }
 
         return jobPostingRepository.save(posting);
     }
