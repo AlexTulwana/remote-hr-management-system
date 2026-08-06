@@ -47,6 +47,13 @@ public class JobPostingController {
 
     // PROTECTED - HR/Admin only
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+    @PatchMapping("/{id}")
+    public ResponseEntity<JobPosting> update(@PathVariable Long id, @RequestBody JobPostingRequest request) {
+        return ResponseEntity.ok(jobPostingService.update(id, request));
+    }
+
+    // PROTECTED - HR/Admin only
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         jobPostingService.delete(id);
