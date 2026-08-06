@@ -1,4 +1,4 @@
 package com.wethinkcode.hrsystem.repository;
 
-public class ApplicationRepository {
+public class ApplicationDocumentRepository {
 }
