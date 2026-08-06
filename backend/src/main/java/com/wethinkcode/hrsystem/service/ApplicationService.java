@@ -2,7 +2,11 @@ package com.wethinkcode.hrsystem.service;
 
 import com.wethinkcode.hrsystem.dto.ApplicationRequest;
 import com.wethinkcode.hrsystem.model.Application;
+import com.wethinkcode.hrsystem.model.ApplicationDocument;
+import com.wethinkcode.hrsystem.model.DocumentType;
 import com.wethinkcode.hrsystem.model.JobPosting;
+
+import com.wethinkcode.hrsystem.repository.ApplicationDocumentRepository;
 import com.wethinkcode.hrsystem.repository.ApplicationRepository;
 import com.wethinkcode.hrsystem.repository.JobPostingRepository;
 import org.springframework.stereotype.Service;
@@ -16,9 +20,8 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
-
-
 
 
 @Service
@@ -26,14 +29,20 @@ public class ApplicationService {
 
     private final ApplicationRepository applicationRepository;
     private final JobPostingRepository jobPostingRepository;
+    private final ApplicationDocumentRepository applicationDocumentRepository;
     private final String uploadDir = "uploads/applications/";
+    private final String documentUploadDir = "uploads/application-documents/";
 
-    public ApplicationService(ApplicationRepository applicationRepository, JobPostingRepository jobPostingRepository) {
+    public ApplicationService(ApplicationRepository applicationRepository,
+                              JobPostingRepository jobPostingRepository,
+                              ApplicationDocumentRepository applicationDocumentRepository) {
         this.applicationRepository = applicationRepository;
         this.jobPostingRepository = jobPostingRepository;
+        this.applicationDocumentRepository = applicationDocumentRepository;
     }
 
-    public Application submit(Long jobPostingId, ApplicationRequest request, MultipartFile cv) {
+    public Application submit(Long jobPostingId, ApplicationRequest request, MultipartFile cv,
+                              Map<DocumentType, MultipartFile> additionalDocuments) {
         JobPosting posting = jobPostingRepository.findById(jobPostingId)
                 .orElseThrow(() -> new RuntimeException("Job posting not found"));
 
@@ -50,6 +59,14 @@ public class ApplicationService {
             throw new RuntimeException("This position has reached its maximum number of applications");
         }
 
+        // Validate required documents are all present before saving anything
+        for (DocumentType required : posting.getRequiredDocuments()) {
+            MultipartFile provided = additionalDocuments.get(required);
+            if (provided == null || provided.isEmpty()) {
+                throw new RuntimeException("Missing required document: " + required);
+            }
+        }
+
         Application application = new Application();
         application.setJobPosting(posting);
         application.setCandidateName(request.getCandidateName());
@@ -60,10 +77,32 @@ public class ApplicationService {
         application.setStatus("SUBMITTED");
 
         if (cv != null && !cv.isEmpty()) {
-            application.setCvPath(saveFile(cv));
+            application.setCvPath(saveFile(cv, uploadDir, List.of(".pdf", ".doc", ".docx")));
         }
 
-        return applicationRepository.save(application);
+        Application saved = applicationRepository.save(application);
+
+        for (Map.Entry<DocumentType, MultipartFile> entry : additionalDocuments.entrySet()) {
+            MultipartFile file = entry.getValue();
+            if (file == null || file.isEmpty()) continue;
+
+            String path = saveFile(file, documentUploadDir, List.of(".pdf", ".jpg", ".jpeg", ".png", ".docx"));
+
+            ApplicationDocument doc = new ApplicationDocument();
+            doc.setApplication(saved);
+            doc.setDocumentType(entry.getKey());
+            doc.setFileName(Paths.get(path).getFileName().toString());
+            doc.setFilePath(path);
+            doc.setUploadedAt(LocalDateTime.now());
+            applicationDocumentRepository.save(doc);
+        }
+
+        return applicationRepository.findById(saved.getId())
+                .orElseThrow(() -> new RuntimeException("Application not found after save"));
+    }
+
+    public List<ApplicationDocument> getDocuments(Long applicationId) {
+        return applicationDocumentRepository.findByApplicationId(applicationId);
     }
 
     public Application updateStatus(Long applicationId, String status) {
@@ -89,38 +128,32 @@ public class ApplicationService {
         return applicationRepository.findAll();
     }
 
-    private String saveFile(MultipartFile file) {
+    private String saveFile(MultipartFile file, String targetDir, List<String> allowedExtensions) {
         try {
-            // Sanitize: strip any path elements, keep only the plain filename
             String originalFilename = Paths.get(file.getOriginalFilename()).getFileName().toString();
-
-            // Restrict to safe characters only (letters, digits, dot, dash, underscore)
             String safeFilename = originalFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
 
-            // Restrict to allowed extensions
             String extension = "";
             int dotIndex = safeFilename.lastIndexOf('.');
             if (dotIndex > 0) {
                 extension = safeFilename.substring(dotIndex).toLowerCase();
             }
-            List<String> allowedExtensions = List.of(".pdf", ".doc", ".docx");
             if (!allowedExtensions.contains(extension)) {
-                throw new RuntimeException("CV must be a PDF or Word document");
+                throw new RuntimeException("File type not allowed: " + extension);
             }
 
-            Files.createDirectories(Paths.get(uploadDir));
+            Files.createDirectories(Paths.get(targetDir));
             String filename = UUID.randomUUID() + extension;
-            Path filePath = Paths.get(uploadDir).resolve(filename).normalize();
+            Path filePath = Paths.get(targetDir).resolve(filename).normalize();
 
-            // Belt-and-braces: confirm the resolved path is still inside uploadDir
-            if (!filePath.startsWith(Paths.get(uploadDir).normalize())) {
+            if (!filePath.startsWith(Paths.get(targetDir).normalize())) {
                 throw new RuntimeException("Invalid file path");
             }
 
             Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
             return filePath.toString();
         } catch (IOException e) {
-            throw new RuntimeException("Failed to store CV file", e);
+            throw new RuntimeException("Failed to store file", e);
         }
     }
 }
