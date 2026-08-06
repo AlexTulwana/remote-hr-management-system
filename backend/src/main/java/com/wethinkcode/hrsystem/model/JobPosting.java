@@ -1,8 +1,12 @@
 package com.wethinkcode.hrsystem.model;
 
+
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
 
 @Entity
 @Table(name = "job_postings")
@@ -30,4 +34,10 @@ public class JobPosting {
     @ManyToOne
     @JoinColumn(name = "posted_by")
     private User postedBy;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "job_posting_required_documents", joinColumns = @JoinColumn(name = "job_posting_id"))
+    @Column(name = "document_type")
+    @Enumerated(EnumType.STRING)
+    private List<DocumentType> requiredDocuments = new ArrayList<>();
 }
