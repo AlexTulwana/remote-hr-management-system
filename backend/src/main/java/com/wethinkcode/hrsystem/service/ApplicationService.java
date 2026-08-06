@@ -18,6 +18,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+
+
+
 @Service
 public class ApplicationService {
 
@@ -88,9 +91,32 @@ public class ApplicationService {
 
     private String saveFile(MultipartFile file) {
         try {
+            // Sanitize: strip any path elements, keep only the plain filename
+            String originalFilename = Paths.get(file.getOriginalFilename()).getFileName().toString();
+
+            // Restrict to safe characters only (letters, digits, dot, dash, underscore)
+            String safeFilename = originalFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+
+            // Restrict to allowed extensions
+            String extension = "";
+            int dotIndex = safeFilename.lastIndexOf('.');
+            if (dotIndex > 0) {
+                extension = safeFilename.substring(dotIndex).toLowerCase();
+            }
+            List<String> allowedExtensions = List.of(".pdf", ".doc", ".docx");
+            if (!allowedExtensions.contains(extension)) {
+                throw new RuntimeException("CV must be a PDF or Word document");
+            }
+
             Files.createDirectories(Paths.get(uploadDir));
-            String filename = UUID.randomUUID() + "_" + file.getOriginalFilename();
-            Path filePath = Paths.get(uploadDir + filename);
+            String filename = UUID.randomUUID() + extension;
+            Path filePath = Paths.get(uploadDir).resolve(filename).normalize();
+
+            // Belt-and-braces: confirm the resolved path is still inside uploadDir
+            if (!filePath.startsWith(Paths.get(uploadDir).normalize())) {
+                throw new RuntimeException("Invalid file path");
+            }
+
             Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
             return filePath.toString();
         } catch (IOException e) {
