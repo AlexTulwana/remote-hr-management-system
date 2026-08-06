@@ -31,6 +31,11 @@ public class InterviewController {
     public ResponseEntity<Interview> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
         return ResponseEntity.ok(interviewService.updateStatus(id, body.get("status"), body.get("notes")));
     }
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+    @GetMapping("/{id}")
+    public ResponseEntity<Interview> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(interviewService.getById(id));
+    }
 
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping("/application/{applicationId}")
