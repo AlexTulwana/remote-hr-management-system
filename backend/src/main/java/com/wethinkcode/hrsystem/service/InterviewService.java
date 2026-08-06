@@ -16,6 +16,8 @@ import java.util.Optional;
 @Service
 public class InterviewService {
 
+    private static final List<String> VALID_STATUSES = List.of("SCHEDULED", "COMPLETED", "CANCELLED");
+
     private final InterviewRepository interviewRepository;
     private final ApplicationRepository applicationRepository;
     private final Optional<MeetingProvider> meetingProvider;
@@ -32,6 +34,12 @@ public class InterviewService {
         Application application = applicationRepository.findById(request.getApplicationId())
                 .orElseThrow(() -> new RuntimeException("Application not found"));
 
+        boolean alreadyScheduled = interviewRepository.findByApplicationId(application.getId())
+                .stream().anyMatch(i -> "SCHEDULED".equals(i.getStatus()));
+        if (alreadyScheduled) {
+            throw new RuntimeException("An interview is already scheduled for this application");
+        }
+
         Interview interview = new Interview();
         interview.setApplication(application);
         interview.setType(request.getType());
@@ -41,7 +49,10 @@ public class InterviewService {
         if ("ONLINE".equals(request.getType())) {
             String meetingLink = request.getMeetingLink();
 
-            if (meetingProvider.isPresent() && (meetingLink == null || meetingLink.isBlank())) {
+            if (meetingLink == null || meetingLink.isBlank()) {
+                if (meetingProvider.isEmpty()) {
+                    throw new RuntimeException("No meeting link provided and no meeting provider configured");
+                }
                 MeetingDetails details = new MeetingDetails(
                         application.getCandidateName(), "Interview", request.getInterviewDateTime());
                 MeetingResult result = meetingProvider.get().createMeeting(details);
@@ -59,7 +70,6 @@ public class InterviewService {
             interview.setLocation(request.getLocation());
         }
 
-        // Update application status to reflect an interview has been scheduled
         application.setStatus("INTERVIEW_SCHEDULED");
         applicationRepository.save(application);
 
@@ -73,6 +83,9 @@ public class InterviewService {
     }
 
     public Interview updateStatus(Long interviewId, String status, String notes) {
+        if (!VALID_STATUSES.contains(status)) {
+            throw new RuntimeException("Invalid status: " + status);
+        }
         Interview interview = getById(interviewId);
         interview.setStatus(status);
         interview.setNotes(notes);
