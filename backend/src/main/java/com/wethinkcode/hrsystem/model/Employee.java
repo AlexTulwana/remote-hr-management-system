@@ -29,6 +29,10 @@ public class Employee {
     private String payGrade;
     private String bankingDetails;
 
+    private String employmentStatus = "ACTIVE"; // ACTIVE, ONBOARDING, RESIGNED, TERMINATED
+    private LocalDate resignationDate;
+    private LocalDate terminationDate;
+
     @ManyToOne
     @JoinColumn(name = "branch_id")
     private Branch branch;
