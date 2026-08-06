@@ -1,5 +1,6 @@
 package com.wethinkcode.hrsystem.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -18,6 +19,7 @@ public class User {
     private String username;
 
     @Column(nullable = false)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     @Column(nullable = false)
@@ -27,6 +29,9 @@ public class User {
     @JoinColumn(name = "employee_id")
     private Employee employee;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String resetToken;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private LocalDateTime resetTokenExpiry;
 }
