@@ -3,6 +3,8 @@ package com.wethinkcode.hrsystem.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "applications")
@@ -28,4 +30,7 @@ public class Application {
 
     private String status = "SUBMITTED"; // SUBMITTED, REVIEWED, INTERVIEW_SCHEDULED, REJECTED, HIRED
     private LocalDateTime submittedAt;
+
+    @OneToMany(mappedBy = "application", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ApplicationDocument> documents = new ArrayList<>();
 }
