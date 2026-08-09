@@ -35,8 +35,11 @@ public class CalendarController {
     public ResponseEntity<List<CalendarItem>> getCalendar(
             @RequestParam LocalDate from,
             @RequestParam LocalDate to,
-            @RequestParam(required = false) Long branchId) {
-        return ResponseEntity.ok(calendarService.getCalendar(from, to, branchId));
+            @RequestParam(required = false) Long branchId,
+            Authentication authentication) {
+        User currentUser = userRepository.findByUsername(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return ResponseEntity.ok(calendarService.getCalendar(from, to, branchId, currentUser));
     }
 
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN') or hasRole('MANAGER')")
