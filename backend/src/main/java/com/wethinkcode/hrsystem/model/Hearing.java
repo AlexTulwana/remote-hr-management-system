@@ -17,6 +17,10 @@ public class Hearing {
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
+    @ManyToOne
+    @JoinColumn(name = "conducted_by")
+    private User conductedBy;
+
     private String caseType; // e.g. Absenteeism, Misconduct
     private String description;
     private LocalDateTime hearingDateTime;
