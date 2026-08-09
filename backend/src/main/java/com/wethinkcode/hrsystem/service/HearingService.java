@@ -46,12 +46,16 @@ public class HearingService {
         this.currentUserService = currentUserService;
     }
 
-    public Hearing schedule(HearingRequest request) {
+    public Hearing schedule(HearingRequest request, String username) {
         Employee employee = employeeRepository.findById(request.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
+        User conductedBy = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         Hearing hearing = new Hearing();
         hearing.setEmployee(employee);
+        hearing.setConductedBy(conductedBy);
         hearing.setCaseType(request.getCaseType());
         hearing.setDescription(request.getDescription());
         hearing.setHearingDateTime(request.getHearingDateTime());
