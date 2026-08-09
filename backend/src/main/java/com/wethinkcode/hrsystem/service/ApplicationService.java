@@ -97,8 +97,8 @@ public class ApplicationService {
             applicationDocumentRepository.save(doc);
         }
 
-        return applicationRepository.findById(saved.getId())
-                .orElseThrow(() -> new RuntimeException("Application not found after save"));
+        saved.setDocuments(applicationDocumentRepository.findByApplicationId(saved.getId()));
+        return saved;
     }
 
     public List<ApplicationDocument> getDocuments(Long applicationId) {
