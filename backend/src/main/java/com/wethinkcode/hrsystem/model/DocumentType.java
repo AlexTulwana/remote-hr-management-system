@@ -1,4 +1,5 @@
 package com.wethinkcode.hrsystem.model;
 
-public class DocumentType {
+public enum DocumentType {
+    CONTRACT, ID_COPY, QUALIFICATION, DISCIPLINARY, CV, COVER_LETTER, OTHER
 }
