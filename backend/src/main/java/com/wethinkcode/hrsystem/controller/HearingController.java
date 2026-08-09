@@ -8,6 +8,7 @@ import com.wethinkcode.hrsystem.service.HearingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 
 
 import java.util.List;
@@ -25,8 +26,8 @@ public class HearingController {
 
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<Hearing> schedule(@RequestBody HearingRequest request) {
-        return ResponseEntity.ok(hearingService.schedule(request));
+    public ResponseEntity<Hearing> schedule(@RequestBody HearingRequest request, Authentication authentication) {
+        return ResponseEntity.ok(hearingService.schedule(request, authentication.getName()));
     }
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PatchMapping("/{id}/outcome")
