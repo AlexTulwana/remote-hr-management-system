@@ -1,5 +1,6 @@
 package com.wethinkcode.hrsystem.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
@@ -15,6 +16,7 @@ public class ApplicationDocument {
 
     @ManyToOne
     @JoinColumn(name = "application_id", nullable = false)
+    @JsonIgnore
     private Application application;
 
     @Enumerated(EnumType.STRING)
