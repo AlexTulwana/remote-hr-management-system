@@ -29,9 +29,13 @@ public class EmployeeRequestService {
         this.userRepository = userRepository;
     }
 
-    public EmployeeRequest submit(EmployeeRequestSubmission submission) {
-        Employee employee = employeeRepository.findById(submission.getEmployeeId())
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+    public EmployeeRequest submit(EmployeeRequestSubmission submission, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        Employee employee = user.getEmployee();
+        if (employee == null) {
+            throw new RuntimeException("This account is not linked to an employee record");
+        }
 
         RequestType type;
         try {
