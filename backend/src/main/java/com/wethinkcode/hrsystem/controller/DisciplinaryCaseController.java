@@ -54,8 +54,9 @@ public class DisciplinaryCaseController {
     }
 
     @GetMapping("/employee/{employeeId}")
-    public ResponseEntity<List<DisciplinaryCase>> getByEmployee(@PathVariable Long employeeId) {
-        return ResponseEntity.ok(disciplinaryCaseService.getByEmployee(employeeId));
+    public ResponseEntity<List<DisciplinaryCase>> getByEmployee(@PathVariable Long employeeId,
+                                                                   Authentication authentication) {
+        return ResponseEntity.ok(disciplinaryCaseService.getByEmployeeForViewer(employeeId, authentication.getName()));
     }
 
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN') or hasRole('MANAGER')")
