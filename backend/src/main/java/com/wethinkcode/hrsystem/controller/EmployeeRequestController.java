@@ -28,8 +28,10 @@ public class EmployeeRequestController {
     }
 
     @PostMapping
-    public ResponseEntity<EmployeeRequest> submit(@RequestBody EmployeeRequestSubmission submission) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(employeeRequestService.submit(submission));
+    public ResponseEntity<EmployeeRequest> submit(@RequestBody EmployeeRequestSubmission submission,
+                                                    Authentication authentication) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(employeeRequestService.submit(submission, authentication.getName()));
     }
 
     @PreAuthorize("hasRole('MANAGER')")
