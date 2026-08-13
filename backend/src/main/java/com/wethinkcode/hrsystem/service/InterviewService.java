@@ -9,6 +9,11 @@ import com.wethinkcode.hrsystem.service.meeting.MeetingDetails;
 import com.wethinkcode.hrsystem.service.meeting.MeetingProvider;
 import com.wethinkcode.hrsystem.service.meeting.MeetingResult;
 import org.springframework.stereotype.Service;
+import com.wethinkcode.hrsystem.config.RabbitMQConfig;
+import com.wethinkcode.hrsystem.dto.InterviewScheduledEvent;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+
+
 
 import java.util.List;
 import java.util.Optional;
@@ -21,13 +26,17 @@ public class InterviewService {
     private final InterviewRepository interviewRepository;
     private final ApplicationRepository applicationRepository;
     private final Optional<MeetingProvider> meetingProvider;
+    private final RabbitTemplate rabbitTemplate;
+
 
     public InterviewService(InterviewRepository interviewRepository,
                             ApplicationRepository applicationRepository,
-                            Optional<MeetingProvider> meetingProvider) {
+                            Optional<MeetingProvider> meetingProvider,
+                            RabbitTemplate rabbitTemplate) {
         this.interviewRepository = interviewRepository;
         this.applicationRepository = applicationRepository;
         this.meetingProvider = meetingProvider;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     public Interview schedule(InterviewRequest request) {
@@ -75,9 +84,18 @@ public class InterviewService {
 
         Interview saved = interviewRepository.save(interview);
 
-        System.out.println("NOTIFICATION: Interview scheduled for candidate "
-                + application.getCandidateName() + " on " + interview.getInterviewDateTime()
-                + (interview.getMeetingLink() != null ? ". Join link: " + interview.getMeetingLink() : ". Location: " + interview.getLocation()));
+        InterviewScheduledEvent event = new InterviewScheduledEvent(
+                saved.getId(),
+                application.getId(),
+                application.getCandidateEmail(),
+                application.getCandidateName(),
+                application.getJobPosting() != null ? application.getJobPosting().getTitle() : null,
+                saved.getInterviewDateTime(),
+                saved.getMeetingLink(),
+                saved.getLocation()
+        );
+
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, "interview.scheduled", event);
 
         return saved;
     }
