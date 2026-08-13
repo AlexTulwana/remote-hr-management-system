@@ -32,6 +32,7 @@ public class Employee {
     private String employmentStatus = "ACTIVE"; // ACTIVE, ONBOARDING, RESIGNED, TERMINATED
     private LocalDate resignationDate;
     private LocalDate terminationDate;
+    private String email;
 
     @ManyToOne
     @JoinColumn(name = "branch_id")
