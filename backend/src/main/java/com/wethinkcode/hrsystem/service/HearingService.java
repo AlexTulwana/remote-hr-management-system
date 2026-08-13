@@ -16,6 +16,12 @@ import com.wethinkcode.hrsystem.service.meeting.MeetingResult;
 import org.springframework.stereotype.Service;
 import com.wethinkcode.hrsystem.security.CurrentUserService;
 import org.springframework.security.access.AccessDeniedException;
+import com.wethinkcode.hrsystem.config.RabbitMQConfig;
+import com.wethinkcode.hrsystem.dto.HearingScheduledEvent;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+
+
+
 
 
 
@@ -31,20 +37,29 @@ public class HearingService {
     private final HearingParticipantRepository hearingParticipantRepository;
     private final UserRepository userRepository;
     private final com.wethinkcode.hrsystem.security.CurrentUserService currentUserService;
+    private final RabbitTemplate rabbitTemplate;
+
+
+
+
 
     public HearingService(HearingRepository hearingRepository,
                           EmployeeRepository employeeRepository,
                           Optional<MeetingProvider> meetingProvider,
                           HearingParticipantRepository hearingParticipantRepository,
                           UserRepository userRepository,
-                          CurrentUserService currentUserService) {
+                          CurrentUserService currentUserService,
+                          RabbitTemplate rabbitTemplate) {
         this.hearingRepository = hearingRepository;
         this.employeeRepository = employeeRepository;
         this.meetingProvider = meetingProvider;
         this.hearingParticipantRepository = hearingParticipantRepository;
         this.userRepository = userRepository;
         this.currentUserService = currentUserService;
+        this.rabbitTemplate = rabbitTemplate;
     }
+
+
 
     public Hearing schedule(HearingRequest request, String username) {
         Employee employee = employeeRepository.findById(request.getEmployeeId())
@@ -80,9 +95,17 @@ public class HearingService {
 
         Hearing saved = hearingRepository.save(hearing);
 
-        System.out.println("NOTIFICATION: Hearing scheduled for employee "
-                + employee.getFullName() + " on " + hearing.getHearingDateTime()
-                + ". Join link: " + hearing.getMeetingLink());
+        HearingScheduledEvent event = new HearingScheduledEvent(
+                saved.getId(),
+                employee.getId(),
+                employee.getEmail(),
+                employee.getFullName(),
+                saved.getHearingDateTime(),
+                saved.getMeetingLink(),
+                conductedBy.getEmployee() != null ? conductedBy.getEmployee().getFullName() : conductedBy.getUsername()
+        );
+
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, "hearing.scheduled", event);
 
         return saved;
     }
