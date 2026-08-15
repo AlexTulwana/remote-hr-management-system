@@ -1,9 +1,12 @@
 package com.wethinkcode.hrsystem.service;
 
 import com.wethinkcode.hrsystem.model.HeadcountSnapshot;
+import com.wethinkcode.hrsystem.model.SalarySnapshot;
 import com.wethinkcode.hrsystem.repository.EmployeeRepository;
 import com.wethinkcode.hrsystem.repository.HeadcountAggregateProjection;
 import com.wethinkcode.hrsystem.repository.HeadcountSnapshotRepository;
+import com.wethinkcode.hrsystem.repository.SalaryAggregateProjection;
+import com.wethinkcode.hrsystem.repository.SalarySnapshotRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -15,16 +18,20 @@ public class HeadcountSnapshotService {
 
     private final EmployeeRepository employeeRepository;
     private final HeadcountSnapshotRepository snapshotRepository;
+    private final SalarySnapshotRepository salarySnapshotRepository;
 
     public HeadcountSnapshotService(EmployeeRepository employeeRepository,
-                                    HeadcountSnapshotRepository snapshotRepository) {
+                                    HeadcountSnapshotRepository snapshotRepository,
+                                    SalarySnapshotRepository salarySnapshotRepository) {
         this.employeeRepository = employeeRepository;
         this.snapshotRepository = snapshotRepository;
+        this.salarySnapshotRepository = salarySnapshotRepository;
     }
 
     @Scheduled(cron = "0 5 0 * * *")
     public void snapshotHeadcountNightly() {
         takeSnapshot(LocalDate.now());
+        takeSalarySnapshot(LocalDate.now());
     }
 
     // Manually triggerable version, e.g. for backfilling today's data immediately
@@ -44,6 +51,28 @@ public class HeadcountSnapshotService {
             snapshot.setHeadcount(agg.getHeadcount().intValue());
 
             snapshotRepository.save(snapshot);
+        }
+
+        return aggregates.size();
+    }
+
+    // Manually triggerable version, mirrors takeSnapshot() but for salary data
+    public int takeSalarySnapshot(LocalDate date) {
+        List<SalaryAggregateProjection> aggregates = employeeRepository.aggregateSalaryByBranchDept();
+
+        for (SalaryAggregateProjection agg : aggregates) {
+            SalarySnapshot snapshot = salarySnapshotRepository
+                    .findBySnapshotDateAndBranchIdAndDepartment(date, agg.getBranchId(), agg.getDepartment())
+                    .orElseGet(SalarySnapshot::new);
+
+            snapshot.setSnapshotDate(date);
+            snapshot.setBranchId(agg.getBranchId());
+            snapshot.setDepartment(agg.getDepartment());
+            snapshot.setTotalSalary(agg.getTotalSalary());
+            snapshot.setAverageSalary(agg.getAverageSalary());
+            snapshot.setEmployeeCount(agg.getEmployeeCount().intValue());
+
+            salarySnapshotRepository.save(snapshot);
         }
 
         return aggregates.size();
