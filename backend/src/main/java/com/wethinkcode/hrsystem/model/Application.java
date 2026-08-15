@@ -23,6 +23,16 @@ public class Application {
     private String candidateEmail;
     private String candidatePhone;
 
+    private Boolean meetsRequirements; // null = not yet assessed
+    private String outcome; // ACCEPTED, REJECTED, null = not yet decided
+    private String outcomeReason;
+    private LocalDateTime decidedAt; // when the final accept/reject decision was made
+    private String requirementsReason;
+    private LocalDateTime reviewedAt;
+
+
+
+
     private String cvPath;
 
     @Column(length = 2000)
