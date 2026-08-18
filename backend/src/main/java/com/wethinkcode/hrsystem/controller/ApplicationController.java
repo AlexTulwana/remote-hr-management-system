@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.wethinkcode.hrsystem.dto.ApplicationOutcomeRequest;
+
 
 import java.util.HashMap;
 import java.util.List;
@@ -97,5 +99,12 @@ public class ApplicationController {
     @GetMapping
     public ResponseEntity<List<Application>> getAll() {
         return ResponseEntity.ok(applicationService.getAll());
+    }
+
+    // PROTECTED - HR/Admin only
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+    @PatchMapping("/{id}/outcome")
+    public ResponseEntity<Application> setOutcome(@PathVariable Long id, @RequestBody ApplicationOutcomeRequest request) {
+        return ResponseEntity.ok(applicationService.setOutcome(id, request));
     }
 }
