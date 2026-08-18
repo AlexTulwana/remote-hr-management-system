@@ -11,6 +11,7 @@ import com.wethinkcode.hrsystem.repository.ApplicationRepository;
 import com.wethinkcode.hrsystem.repository.JobPostingRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import com.wethinkcode.hrsystem.dto.ApplicationOutcomeRequest;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -126,6 +127,25 @@ public class ApplicationService {
 
     public List<Application> getAll() {
         return applicationRepository.findAll();
+    }
+
+    public Application setOutcome(Long applicationId, ApplicationOutcomeRequest request) {
+        Application application = getById(applicationId);
+
+        if (request.getMeetsRequirements() != null) {
+            application.setMeetsRequirements(request.getMeetsRequirements());
+            application.setRequirementsReason(request.getRequirementsReason());
+            application.setReviewedAt(LocalDateTime.now());
+        }
+
+        if (request.getOutcome() != null) {
+            application.setOutcome(request.getOutcome());
+            application.setOutcomeReason(request.getOutcomeReason());
+            application.setDecidedAt(LocalDateTime.now());
+            application.setStatus(request.getOutcome().equals("ACCEPTED") ? "HIRED" : "REJECTED");
+        }
+
+        return applicationRepository.save(application);
     }
 
     private String saveFile(MultipartFile file, String targetDir, List<String> allowedExtensions) {
