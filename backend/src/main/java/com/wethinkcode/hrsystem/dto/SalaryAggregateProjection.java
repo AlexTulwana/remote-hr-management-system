@@ -1,4 +1,11 @@
 package com.wethinkcode.hrsystem.dto;
 
-public class SalaryAggregateProjection {
+import java.math.BigDecimal;
+
+public interface SalaryAggregateProjection {
+    Long getBranchId();
+    String getDepartment();
+    BigDecimal getTotalSalary();
+    BigDecimal getAverageSalary();
+    Long getEmployeeCount();
 }
