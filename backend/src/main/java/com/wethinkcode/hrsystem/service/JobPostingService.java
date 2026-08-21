@@ -6,6 +6,8 @@ import com.wethinkcode.hrsystem.model.User;
 import com.wethinkcode.hrsystem.repository.JobPostingRepository;
 import com.wethinkcode.hrsystem.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import com.wethinkcode.hrsystem.dto.EmailTemplateUpdateRequest;
+
 
 import java.time.LocalDate;
 import java.util.List;
@@ -53,6 +55,22 @@ public class JobPostingService {
         posting.setMaxApplications(request.getMaxApplications());
         if (request.getRequiredDocuments() != null) {
             posting.setRequiredDocuments(request.getRequiredDocuments());
+        }
+
+        return jobPostingRepository.save(posting);
+    }
+
+    public JobPosting updateEmailTemplates(Long id, EmailTemplateUpdateRequest request) {
+        JobPosting posting = getById(id);
+
+        if (request.getRejectedEmailTemplate() != null) {
+            posting.setRejectedEmailTemplate(request.getRejectedEmailTemplate());
+        }
+        if (request.getInterviewInviteEmailTemplate() != null) {
+            posting.setInterviewInviteEmailTemplate(request.getInterviewInviteEmailTemplate());
+        }
+        if (request.getAcceptedEmailTemplate() != null) {
+            posting.setAcceptedEmailTemplate(request.getAcceptedEmailTemplate());
         }
 
         return jobPostingRepository.save(posting);
