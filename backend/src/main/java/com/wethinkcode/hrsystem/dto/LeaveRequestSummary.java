@@ -1,4 +1,32 @@
 package com.wethinkcode.hrsystem.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
+import java.time.LocalDate;
+
+@Data
+@AllArgsConstructor
 public class LeaveRequestSummary {
+    private Long id;
+    private String leaveType;
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private String reason;
+    private String status;
+    private String rejectionReason;
+    private EmployeeSummary employee;
+
+    public static LeaveRequestSummary from(com.wethinkcode.hrsystem.model.LeaveRequest r) {
+        return new LeaveRequestSummary(
+                r.getId(),
+                r.getLeaveType(),
+                r.getStartDate(),
+                r.getEndDate(),
+                r.getReason(),
+                r.getStatus(),
+                r.getRejectionReason(),
+                EmployeeSummary.from(r.getEmployee())
+        );
+    }
 }
