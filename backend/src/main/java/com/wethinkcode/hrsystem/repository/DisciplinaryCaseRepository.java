@@ -9,4 +9,5 @@ public interface DisciplinaryCaseRepository extends JpaRepository<DisciplinaryCa
     List<DisciplinaryCase> findByEmployeeId(Long employeeId);
     List<DisciplinaryCase> findByEmployeeBranchId(Long branchId);
     List<DisciplinaryCase> findByClosedFalse();
+    List<DisciplinaryCase> findByEmployeeBranchIdAndClosedFalse(Long branchId);
 }
