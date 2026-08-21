@@ -13,6 +13,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import com.wethinkcode.hrsystem.dto.ApplicationOutcomeRequest;
 
+
+import com.wethinkcode.hrsystem.config.RabbitMQConfig;
+import com.wethinkcode.hrsystem.dto.ApplicationOutcomeChangedEvent;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,15 +37,18 @@ public class ApplicationService {
     private final ApplicationRepository applicationRepository;
     private final JobPostingRepository jobPostingRepository;
     private final ApplicationDocumentRepository applicationDocumentRepository;
+    private final RabbitTemplate rabbitTemplate;
     private final String uploadDir = "uploads/applications/";
     private final String documentUploadDir = "uploads/application-documents/";
 
     public ApplicationService(ApplicationRepository applicationRepository,
                               JobPostingRepository jobPostingRepository,
-                              ApplicationDocumentRepository applicationDocumentRepository) {
+                              ApplicationDocumentRepository applicationDocumentRepository,
+                              RabbitTemplate rabbitTemplate) {
         this.applicationRepository = applicationRepository;
         this.jobPostingRepository = jobPostingRepository;
         this.applicationDocumentRepository = applicationDocumentRepository;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     public Application submit(Long jobPostingId, ApplicationRequest request, MultipartFile cv,
@@ -145,7 +154,22 @@ public class ApplicationService {
             application.setStatus(request.getOutcome().equals("ACCEPTED") ? "HIRED" : "REJECTED");
         }
 
-        return applicationRepository.save(application);
+        Application saved = applicationRepository.save(application);
+
+        if (request.getOutcome() != null) {
+            ApplicationOutcomeChangedEvent event = new ApplicationOutcomeChangedEvent(
+                    saved.getId(),
+                    saved.getJobPosting() != null ? saved.getJobPosting().getId() : null,
+                    saved.getCandidateEmail(),
+                    saved.getCandidateName(),
+                    saved.getJobPosting() != null ? saved.getJobPosting().getTitle() : null,
+                    saved.getOutcome(),
+                    saved.getOutcomeReason()
+            );
+            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, "application.outcome.changed", event);
+        }
+
+        return saved;
     }
 
     private String saveFile(MultipartFile file, String targetDir, List<String> allowedExtensions) {
