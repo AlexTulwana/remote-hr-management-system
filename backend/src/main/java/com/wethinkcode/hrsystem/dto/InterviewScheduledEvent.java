@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 public record InterviewScheduledEvent(
         Long interviewId,
         Long applicationId,
+        Long jobPostingId,
         String candidateEmail,
         String candidateName,
         String jobTitle,
