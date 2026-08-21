@@ -27,6 +27,15 @@ public class JobPosting {
 
     private String department;
 
+    @Column(length = 2000)
+    private String rejectedEmailTemplate;
+
+    @Column(length = 2000)
+    private String interviewInviteEmailTemplate;
+
+    @Column(length = 2000)
+    private String acceptedEmailTemplate;
+
     private LocalDate startDate;
     private LocalDate endDate;
     private Integer maxApplications;
