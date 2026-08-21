@@ -87,6 +87,7 @@ public class InterviewService {
         InterviewScheduledEvent event = new InterviewScheduledEvent(
                 saved.getId(),
                 application.getId(),
+                application.getJobPosting() != null ? application.getJobPosting().getId() : null,
                 application.getCandidateEmail(),
                 application.getCandidateName(),
                 application.getJobPosting() != null ? application.getJobPosting().getTitle() : null,
