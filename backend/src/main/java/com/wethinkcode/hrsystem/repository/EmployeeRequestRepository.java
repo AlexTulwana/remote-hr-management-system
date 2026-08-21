@@ -18,4 +18,5 @@ public interface EmployeeRequestRepository extends JpaRepository<EmployeeRequest
     @Query("SELECT r FROM EmployeeRequest r WHERE r.resolvedAt IS NOT NULL " +
             "AND r.resolvedAt BETWEEN :start AND :end")
     List<EmployeeRequest> findResolvedBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+    List<EmployeeRequest> findByStatusAndEmployeeBranchId(String status, Long branchId);
 }
