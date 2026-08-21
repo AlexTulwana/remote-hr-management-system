@@ -37,3 +37,6 @@ tokens/
 
 # User-uploaded files - never commit
 uploads/
+
+# Local dev notes with credentials - never commit
+dev-notes.md
