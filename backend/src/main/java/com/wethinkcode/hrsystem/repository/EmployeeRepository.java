@@ -18,4 +18,5 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             "GROUP BY e.branch.id, e.department")
     List<SalaryAggregateProjection> aggregateSalaryByBranchDept();
 
+    List<Employee> findByBranchId(Long branchId);
 }
