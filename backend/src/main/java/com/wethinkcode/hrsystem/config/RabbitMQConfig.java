@@ -48,6 +48,13 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Binding notificationOutcomeBinding(Queue notificationQueue, TopicExchange hrEventsExchange) {
+        return BindingBuilder.bind(notificationQueue)
+                .to(hrEventsExchange)
+                .with("#.changed");
+    }
+
+    @Bean
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory, MessageConverter jsonMessageConverter) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
         template.setMessageConverter(jsonMessageConverter);
