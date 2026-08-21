@@ -55,7 +55,8 @@ def compute_headcount_totals(df: pd.DataFrame, metric_date: date) -> pd.DataFram
 def compute_turnover_rate(df: pd.DataFrame, metric_date: date, period_days: int = 30) -> pd.DataFrame:
     """
     Turnover rate = (resigned + terminated in period) / average active headcount in period.
-    Computed company-wide for the trailing `period_days` window ending at metric_date.
+    Computed both company-wide (branch_id=0) and per-branch, for the trailing
+    `period_days` window ending at metric_date.
     """
     period_start = metric_date - timedelta(days=period_days)
     period_df = df[(df["snapshot_date"] > period_start) & (df["snapshot_date"] <= metric_date)]
@@ -63,20 +64,47 @@ def compute_turnover_rate(df: pd.DataFrame, metric_date: date, period_days: int 
     if period_df.empty:
         return pd.DataFrame()
 
+    results = []
+
+    # --- Company-wide (unchanged, branch_id=0) ---
     leavers = period_df[period_df["employment_status"].isin(["RESIGNED", "TERMINATED"])]
     leavers_count = leavers.groupby("snapshot_date")["headcount"].sum().sum()
 
     active_by_day = period_df[period_df["employment_status"] == "ACTIVE"].groupby("snapshot_date")["headcount"].sum()
     avg_active = active_by_day.mean() if not active_by_day.empty else 0
 
-    turnover_rate = (leavers_count / avg_active) if avg_active > 0 else 0.0
-
-    return pd.DataFrame([{
+    company_rate = (leavers_count / avg_active) if avg_active > 0 else 0.0
+    results.append({
         "metric_date": metric_date,
         "branch_id": 0,
         "metric_name": "turnover_rate_30d",
-        "metric_value": round(turnover_rate, 4),
-    }])
+        "metric_value": round(company_rate, 4),
+    })
+
+    # --- Per-branch ---
+    leavers_by_branch = (
+        leavers.groupby(["snapshot_date", "branch_id"])["headcount"].sum()
+        .groupby("branch_id").sum()
+    )
+    active_by_branch_day = (
+        period_df[period_df["employment_status"] == "ACTIVE"]
+        .groupby(["snapshot_date", "branch_id"])["headcount"].sum()
+    )
+    avg_active_by_branch = active_by_branch_day.groupby("branch_id").mean()
+
+    all_branch_ids = set(leavers_by_branch.index) | set(avg_active_by_branch.index)
+    for branch_id in all_branch_ids:
+        branch_leavers = leavers_by_branch.get(branch_id, 0)
+        branch_avg_active = avg_active_by_branch.get(branch_id, 0)
+        branch_rate = (branch_leavers / branch_avg_active) if branch_avg_active > 0 else 0.0
+        results.append({
+            "metric_date": metric_date,
+            "branch_id": int(branch_id),
+            "metric_name": "turnover_rate_30d",
+            "metric_value": round(branch_rate, 4),
+        })
+
+    return pd.DataFrame(results)
 
 
 def write_results(results: pd.DataFrame):
