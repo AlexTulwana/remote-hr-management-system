@@ -1,5 +1,6 @@
 package com.wethinkcode.hrsystem.controller;
 
+import com.wethinkcode.hrsystem.dto.EmailTemplateUpdateRequest;
 import com.wethinkcode.hrsystem.dto.JobPostingRequest;
 import com.wethinkcode.hrsystem.model.JobPosting;
 import com.wethinkcode.hrsystem.service.JobPostingService;
@@ -50,6 +51,13 @@ public class JobPostingController {
     @PatchMapping("/{id}")
     public ResponseEntity<JobPosting> update(@PathVariable Long id, @RequestBody JobPostingRequest request) {
         return ResponseEntity.ok(jobPostingService.update(id, request));
+    }
+
+    // PROTECTED - HR/Admin only
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+    @PatchMapping("/{id}/email-templates")
+    public ResponseEntity<JobPosting> updateEmailTemplates(@PathVariable Long id, @RequestBody EmailTemplateUpdateRequest request) {
+        return ResponseEntity.ok(jobPostingService.updateEmailTemplates(id, request));
     }
 
     // PROTECTED - HR/Admin only
