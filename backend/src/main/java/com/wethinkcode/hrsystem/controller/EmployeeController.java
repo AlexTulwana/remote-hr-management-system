@@ -1,5 +1,6 @@
 package com.wethinkcode.hrsystem.controller;
 
+import com.wethinkcode.hrsystem.dto.EmployeeDetail;
 import com.wethinkcode.hrsystem.dto.EmployeeRequest;
 import com.wethinkcode.hrsystem.model.Employee;
 import com.wethinkcode.hrsystem.service.EmployeeService;
@@ -25,14 +26,16 @@ public class EmployeeController {
         return ResponseEntity.ok(employeeService.create(request));
     }
 
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping
-    public ResponseEntity<List<Employee>> getAll() {
-        return ResponseEntity.ok(employeeService.getAll());
+    public ResponseEntity<List<EmployeeDetail>> getAll() {
+        return ResponseEntity.ok(employeeService.getAll().stream().map(EmployeeDetail::from).toList());
     }
 
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping("/{id}")
-    public ResponseEntity<Employee> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(employeeService.getById(id));
+    public ResponseEntity<EmployeeDetail> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(EmployeeDetail.from(employeeService.getById(id)));
     }
 
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
