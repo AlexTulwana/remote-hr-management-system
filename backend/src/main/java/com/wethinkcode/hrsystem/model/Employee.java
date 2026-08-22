@@ -35,6 +35,10 @@ public class Employee {
     private String email;
 
     @ManyToOne
+    @JoinColumn(name = "reports_to_id")
+    private Employee reportsTo;
+
+    @ManyToOne
     @JoinColumn(name = "branch_id")
     private Branch branch;
 }
