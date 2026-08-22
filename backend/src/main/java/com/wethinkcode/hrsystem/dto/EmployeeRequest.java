@@ -13,4 +13,5 @@ public class EmployeeRequest {
     private String contactDetails;
     private LocalDate employmentDate;
     private Long branchId;
+    private Long reportsToId;
 }
