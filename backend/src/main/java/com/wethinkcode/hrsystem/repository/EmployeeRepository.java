@@ -2,11 +2,12 @@ package com.wethinkcode.hrsystem.repository;
 
 import com.wethinkcode.hrsystem.model.Employee;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
-public interface EmployeeRepository extends JpaRepository<Employee, Long> {
+public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSpecificationExecutor<Employee> {
 
     @Query("SELECT e.branch.id as branchId, e.department as department, e.employmentStatus as employmentStatus, COUNT(e) as headcount " +
             "FROM Employee e GROUP BY e.branch.id, e.department, e.employmentStatus")
@@ -19,4 +20,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     List<SalaryAggregateProjection> aggregateSalaryByBranchDept();
 
     List<Employee> findByBranchId(Long branchId);
+
+    List<Employee> findByReportsToId(Long reportsToId);
+    List<Employee> findByReportsToIsNull();
 }
