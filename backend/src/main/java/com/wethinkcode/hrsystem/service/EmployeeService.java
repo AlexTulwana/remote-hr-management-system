@@ -73,5 +73,14 @@ public class EmployeeService {
                     .orElseThrow(() -> new RuntimeException("Branch not found"));
             employee.setBranch(branch);
         }
+
+        if (request.getReportsToId() != null) {
+            if (request.getReportsToId().equals(employee.getId())) {
+                throw new RuntimeException("An employee cannot report to themselves");
+            }
+            Employee manager = employeeRepository.findById(request.getReportsToId())
+                    .orElseThrow(() -> new RuntimeException("Reports-to employee not found"));
+            employee.setReportsTo(manager);
+        }
     }
 }
