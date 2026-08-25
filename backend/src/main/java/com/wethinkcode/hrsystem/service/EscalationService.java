@@ -9,6 +9,7 @@ import com.wethinkcode.hrsystem.repository.EmployeeRepository;
 import com.wethinkcode.hrsystem.repository.EscalationRepository;
 import com.wethinkcode.hrsystem.repository.HearingRepository;
 import com.wethinkcode.hrsystem.repository.UserRepository;
+import com.wethinkcode.hrsystem.security.CurrentUserService;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -21,20 +22,22 @@ public class EscalationService {
     private final UserRepository userRepository;
     private final EmployeeRepository employeeRepository;
     private final HearingRepository hearingRepository;
+    private final CurrentUserService currentUserService;
 
     public EscalationService(EscalationRepository escalationRepository,
                              UserRepository userRepository,
                              EmployeeRepository employeeRepository,
-                             HearingRepository hearingRepository) {
+                             HearingRepository hearingRepository,
+                             CurrentUserService currentUserService) {
         this.escalationRepository = escalationRepository;
         this.userRepository = userRepository;
         this.employeeRepository = employeeRepository;
         this.hearingRepository = hearingRepository;
+        this.currentUserService = currentUserService;
     }
 
     public Escalation submit(EscalationRequest request) {
-        User reporter = userRepository.findById(request.getReporterId())
-                .orElseThrow(() -> new RuntimeException("Reporter not found"));
+        User reporter = currentUserService.getCurrentUser();
 
         Escalation escalation = new Escalation();
         escalation.setReporter(reporter);
@@ -76,8 +79,7 @@ public class EscalationService {
                 .orElseThrow(() -> new RuntimeException("Escalation not found"));
     }
 
-    // NOTE: this returns everything - only HR/Admin should be allowed to call this endpoint.
-    // Role enforcement happens at the controller/security layer (refined further in Phase 16).
+    // Role enforcement happens at the controller/security layer (@PreAuthorize HR/ADMIN)
     public List<Escalation> getAll() {
         return escalationRepository.findAll();
     }
