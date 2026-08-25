@@ -47,22 +47,22 @@ public class AnnouncementController {
         return ResponseEntity.ok(announcementService.getAll());
     }
 
-    // PROTECTED - HR/Admin only
-    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+    // PROTECTED - HR/Admin post anywhere (or all branches); Manager posts to their own branch only (enforced in service)
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN') or hasRole('MANAGER')")
     @PostMapping(consumes = "multipart/form-data")
     public ResponseEntity<Announcement> create(
             @RequestParam String title,
             @RequestParam String content,
             @RequestParam String category,
             @RequestParam(required = false) String expiryDate,
-            @RequestParam Long postedById,
+            @RequestParam(required = false) Long branchId,
             @RequestParam(required = false) MultipartFile poster) {
 
         AnnouncementRequest request = new AnnouncementRequest();
         request.setTitle(title);
         request.setContent(content);
         request.setCategory(category);
-        request.setPostedById(postedById);
+        request.setBranchId(branchId);
         if (expiryDate != null && !expiryDate.isBlank()) {
             request.setExpiryDate(java.time.LocalDate.parse(expiryDate));
         }
@@ -70,8 +70,8 @@ public class AnnouncementController {
         return ResponseEntity.ok(announcementService.create(request, poster));
     }
 
-    // PROTECTED - HR/Admin only
-    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+    // PROTECTED - HR/Admin delete anything; Manager deletes their own branch's announcements only (enforced in service)
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN') or hasRole('MANAGER')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         announcementService.delete(id);

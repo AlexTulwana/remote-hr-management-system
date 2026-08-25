@@ -9,5 +9,5 @@ public class AnnouncementRequest {
     private String content;
     private String category;
     private LocalDate expiryDate;
-    private Long postedById;
+    private Long branchId; // null = post to all branches (HR/ADMIN only); Manager must set their own branch
 }

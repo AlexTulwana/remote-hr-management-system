@@ -28,4 +28,8 @@ public class Announcement {
     @ManyToOne
     @JoinColumn(name = "posted_by")
     private User postedBy;
+
+    @ManyToOne
+    @JoinColumn(name = "branch_id")
+    private Branch branch;   // null = visible to all branches
 }
