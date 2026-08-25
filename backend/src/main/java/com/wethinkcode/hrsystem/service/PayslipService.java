@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import com.wethinkcode.hrsystem.security.CurrentUserService;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.beans.factory.annotation.Value;
+
 
 
 import java.io.IOException;
@@ -27,14 +29,18 @@ public class PayslipService {
 
     private final PayslipRepository payslipRepository;
     private final EmployeeRepository employeeRepository;
-    private final String uploadDir = "uploads/payslips/";
+    private final String uploadDir;
     private final CurrentUserService currentUserService;
 
 
-    public PayslipService(PayslipRepository payslipRepository, EmployeeRepository employeeRepository, CurrentUserService currentUserService) {
+    public PayslipService(PayslipRepository payslipRepository,
+                          EmployeeRepository employeeRepository,
+                          CurrentUserService currentUserService,
+                          @Value("${payslip.upload-dir:uploads/payslips/}") String uploadDir) {
         this.payslipRepository = payslipRepository;
         this.employeeRepository = employeeRepository;
         this.currentUserService = currentUserService;
+        this.uploadDir = uploadDir.endsWith("/") ? uploadDir : uploadDir + "/";
     }
 
     public Payslip upload(Long employeeId, String payPeriod, MultipartFile file) {
