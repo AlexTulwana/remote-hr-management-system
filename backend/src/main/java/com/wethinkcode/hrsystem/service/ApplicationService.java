@@ -12,6 +12,7 @@ import com.wethinkcode.hrsystem.repository.JobPostingRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import com.wethinkcode.hrsystem.dto.ApplicationOutcomeRequest;
+import org.springframework.beans.factory.annotation.Value;
 
 
 import com.wethinkcode.hrsystem.config.RabbitMQConfig;
@@ -38,17 +39,21 @@ public class ApplicationService {
     private final JobPostingRepository jobPostingRepository;
     private final ApplicationDocumentRepository applicationDocumentRepository;
     private final RabbitTemplate rabbitTemplate;
-    private final String uploadDir = "uploads/applications/";
-    private final String documentUploadDir = "uploads/application-documents/";
+    private final String uploadDir;
+    private final String documentUploadDir;
 
     public ApplicationService(ApplicationRepository applicationRepository,
                               JobPostingRepository jobPostingRepository,
                               ApplicationDocumentRepository applicationDocumentRepository,
-                              RabbitTemplate rabbitTemplate) {
+                              RabbitTemplate rabbitTemplate,
+                              @Value("${application.upload-dir:uploads/applications/}") String uploadDir,
+                              @Value("${application.document-upload-dir:uploads/application-documents/}") String documentUploadDir) {
         this.applicationRepository = applicationRepository;
         this.jobPostingRepository = jobPostingRepository;
         this.applicationDocumentRepository = applicationDocumentRepository;
         this.rabbitTemplate = rabbitTemplate;
+        this.uploadDir = uploadDir;
+        this.documentUploadDir = documentUploadDir;
     }
 
     public Application submit(Long jobPostingId, ApplicationRequest request, MultipartFile cv,
