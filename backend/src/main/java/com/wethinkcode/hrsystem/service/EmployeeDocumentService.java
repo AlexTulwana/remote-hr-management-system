@@ -7,6 +7,7 @@ import com.wethinkcode.hrsystem.repository.UserRepository;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -22,7 +23,7 @@ public class EmployeeDocumentService {
 
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     private static final List<String> ALLOWED_EXTENSIONS = List.of(".pdf", ".jpg", ".jpeg", ".png", ".docx");
-    private final String uploadDir = "uploads/employee-documents/";
+    private final String uploadDir;
 
     private final EmployeeDocumentRepository documentRepository;
     private final EmployeeRepository employeeRepository;
@@ -30,10 +31,12 @@ public class EmployeeDocumentService {
 
     public EmployeeDocumentService(EmployeeDocumentRepository documentRepository,
                                    EmployeeRepository employeeRepository,
-                                   UserRepository userRepository) {
+                                   UserRepository userRepository,
+                                   @Value("${employee-document.upload-dir:uploads/employee-documents/}") String uploadDir) {
         this.documentRepository = documentRepository;
         this.employeeRepository = employeeRepository;
         this.userRepository = userRepository;
+        this.uploadDir = uploadDir;
     }
 
     private User currentUser(String username) {
