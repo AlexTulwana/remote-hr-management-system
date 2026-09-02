@@ -22,11 +22,59 @@ public class EmployeeRequestService {
     private final UserRepository userRepository;
 
     public EmployeeRequestService(EmployeeRequestRepository employeeRequestRepository,
-                                   EmployeeRepository employeeRepository,
-                                   UserRepository userRepository) {
+                                  EmployeeRepository employeeRepository,
+                                  UserRepository userRepository) {
         this.employeeRequestRepository = employeeRequestRepository;
         this.employeeRepository = employeeRepository;
         this.userRepository = userRepository;
+    }
+
+    // unchanged - used internally by managerDecision/hrDecision, no auth check needed there
+    public EmployeeRequest getById(Long id) {
+        return employeeRequestRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+    }
+
+    // NEW - checked version for controller use
+    public EmployeeRequest getById(Long id, String username) {
+        EmployeeRequest request = getById(id);
+        requireSelfOrManagerBranchOrHrAdmin(request.getEmployee(), username);
+        return request;
+    }
+
+    // unchanged - used internally / by pre-existing tests, no auth check
+    public List<EmployeeRequest> getByEmployee(Long employeeId) {
+        return employeeRequestRepository.findByEmployeeId(employeeId);
+    }
+
+    // NEW - checked version for controller use
+    public List<EmployeeRequest> getByEmployee(Long employeeId, String username) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        requireSelfOrManagerBranchOrHrAdmin(employee, username);
+        return getByEmployee(employeeId);
+    }
+
+    private void requireSelfOrManagerBranchOrHrAdmin(Employee targetEmployee, String username) {
+        User current = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        String role = current.getRole();
+
+        if ("HR".equals(role) || "ADMIN".equals(role)) {
+            return;
+        }
+        if (current.getEmployee() != null && current.getEmployee().getId().equals(targetEmployee.getId())) {
+            return;
+        }
+        if ("MANAGER".equals(role)) {
+            Long managerBranchId = current.getEmployee() != null && current.getEmployee().getBranch() != null
+                    ? current.getEmployee().getBranch().getId() : null;
+            Long targetBranchId = targetEmployee.getBranch() != null ? targetEmployee.getBranch().getId() : null;
+            if (managerBranchId != null && managerBranchId.equals(targetBranchId)) {
+                return;
+            }
+        }
+        throw new AccessDeniedException("Not authorized to view this employee request");
     }
 
     public EmployeeRequest submit(EmployeeRequestSubmission submission, String username) {
@@ -105,15 +153,6 @@ public class EmployeeRequestService {
         request.setHandledBy(hrUser);
         request.setResolvedAt(LocalDateTime.now());
         return employeeRequestRepository.save(request);
-    }
-
-    public EmployeeRequest getById(Long id) {
-        return employeeRequestRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Request not found"));
-    }
-
-    public List<EmployeeRequest> getByEmployee(Long employeeId) {
-        return employeeRequestRepository.findByEmployeeId(employeeId);
     }
 
     public List<EmployeeRequest> getByBranch(Long branchId) {
