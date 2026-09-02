@@ -55,13 +55,13 @@ public class EmployeeRequestController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<EmployeeRequest> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(employeeRequestService.getById(id));
+    public ResponseEntity<EmployeeRequest> getById(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(employeeRequestService.getById(id, authentication.getName()));
     }
 
     @GetMapping("/employee/{employeeId}")
-    public ResponseEntity<List<EmployeeRequest>> getByEmployee(@PathVariable Long employeeId) {
-        return ResponseEntity.ok(employeeRequestService.getByEmployee(employeeId));
+    public ResponseEntity<List<EmployeeRequest>> getByEmployee(@PathVariable Long employeeId, Authentication authentication) {
+        return ResponseEntity.ok(employeeRequestService.getByEmployee(employeeId, authentication.getName()));
     }
 
     @PreAuthorize("hasRole('MANAGER') or hasRole('HR') or hasRole('ADMIN')")
