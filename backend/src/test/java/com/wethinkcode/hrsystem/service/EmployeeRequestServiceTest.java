@@ -259,4 +259,95 @@ class EmployeeRequestServiceTest {
 
         assertThat(employeeRequestService.getEscalated()).containsExactly(pendingRequest);
     }
+
+    // --- getById(Long, String) - new checked overload ---
+
+    @Test
+    void getById_self_returnsRequest() {
+        when(employeeRequestRepository.findById(1L)).thenReturn(Optional.of(pendingRequest));
+        when(userRepository.findByUsername("emptest1")).thenReturn(Optional.of(employeeUser));
+
+        EmployeeRequest result = employeeRequestService.getById(1L, "emptest1");
+
+        assertThat(result).isEqualTo(pendingRequest);
+    }
+
+    @Test
+    void getById_managerSameBranch_returnsRequest() {
+        when(employeeRequestRepository.findById(1L)).thenReturn(Optional.of(pendingRequest));
+        when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(managerUser));
+
+        EmployeeRequest result = employeeRequestService.getById(1L, "mgrtest1");
+
+        assertThat(result).isEqualTo(pendingRequest);
+    }
+
+    @Test
+    void getById_managerDifferentBranch_throwsAccessDenied() {
+        when(employeeRequestRepository.findById(1L)).thenReturn(Optional.of(pendingRequest));
+        when(userRepository.findByUsername("othermgr")).thenReturn(Optional.of(otherBranchManagerUser));
+
+        assertThatThrownBy(() -> employeeRequestService.getById(1L, "othermgr"))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void getById_hr_returnsRequestRegardlessOfBranch() {
+        when(employeeRequestRepository.findById(1L)).thenReturn(Optional.of(pendingRequest));
+        when(userRepository.findByUsername("hrtest2")).thenReturn(Optional.of(hrUser));
+
+        EmployeeRequest result = employeeRequestService.getById(1L, "hrtest2");
+
+        assertThat(result).isEqualTo(pendingRequest);
+    }
+
+    @Test
+    void getById_unrelatedEmployee_throwsAccessDenied() {
+        Employee unrelatedEmployee = new Employee();
+        unrelatedEmployee.setId(99L);
+        unrelatedEmployee.setBranch(null);
+        User unrelatedUser = new User();
+        unrelatedUser.setUsername("unrelated");
+        unrelatedUser.setEmployee(unrelatedEmployee);
+
+        when(employeeRequestRepository.findById(1L)).thenReturn(Optional.of(pendingRequest));
+        when(userRepository.findByUsername("unrelated")).thenReturn(Optional.of(unrelatedUser));
+
+        assertThatThrownBy(() -> employeeRequestService.getById(1L, "unrelated"))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    // --- getByEmployee(Long, String) - new checked overload ---
+
+    @Test
+    void getByEmployeeChecked_self_returnsRequests() {
+        when(employeeRepository.findById(4L)).thenReturn(Optional.of(employee));
+        when(userRepository.findByUsername("emptest1")).thenReturn(Optional.of(employeeUser));
+        when(employeeRequestRepository.findByEmployeeId(4L)).thenReturn(List.of(pendingRequest));
+
+        List<EmployeeRequest> result = employeeRequestService.getByEmployee(4L, "emptest1");
+
+        assertThat(result).containsExactly(pendingRequest);
+    }
+
+    @Test
+    void getByEmployeeChecked_managerSameBranch_returnsRequests() {
+        when(employeeRepository.findById(4L)).thenReturn(Optional.of(employee));
+        when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(managerUser));
+        when(employeeRequestRepository.findByEmployeeId(4L)).thenReturn(List.of(pendingRequest));
+
+        List<EmployeeRequest> result = employeeRequestService.getByEmployee(4L, "mgrtest1");
+
+        assertThat(result).containsExactly(pendingRequest);
+    }
+
+    @Test
+    void getByEmployeeChecked_notSelfNotManagerNotHr_throwsAccessDenied() {
+        when(employeeRepository.findById(4L)).thenReturn(Optional.of(employee));
+        when(userRepository.findByUsername("othermgr")).thenReturn(Optional.of(otherBranchManagerUser));
+
+        assertThatThrownBy(() -> employeeRequestService.getByEmployee(4L, "othermgr"))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
 }
