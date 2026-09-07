@@ -36,6 +36,7 @@ public class LeaveRequestService {
     }
 
     public LeaveRequest submit(Long employeeId, LeaveRequestDto dto, MultipartFile attachment) {
+        requireSelfOrHrAdmin(employeeId);
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
@@ -54,14 +55,17 @@ public class LeaveRequestService {
         return leaveRequestRepository.save(leave);
     }
 
+
     public LeaveRequest approve(Long leaveId) {
         LeaveRequest leave = getById(leaveId);
+        requireManagerSameBranchOrHrAdmin(leave.getEmployee());
         leave.setStatus("APPROVED");
         return leaveRequestRepository.save(leave);
     }
 
     public LeaveRequest reject(Long leaveId, String reason) {
         LeaveRequest leave = getById(leaveId);
+        requireManagerSameBranchOrHrAdmin(leave.getEmployee());
         leave.setStatus("REJECTED");
         leave.setRejectionReason(reason);
         return leaveRequestRepository.save(leave);
@@ -87,6 +91,7 @@ public class LeaveRequestService {
     }
 
     public List<LeaveRequest> getByBranch(Long branchId) {
+        requireManagerOwnBranchOrHrAdmin(branchId);
         return leaveRequestRepository.findByEmployeeBranchId(branchId);
     }
 
@@ -100,5 +105,39 @@ public class LeaveRequestService {
         } catch (IOException e) {
             throw new RuntimeException("Failed to store attachment", e);
         }
+    }
+
+    private void requireSelfOrHrAdmin(Long employeeId) {
+        String role = currentUserService.getCurrentUser().getRole();
+        if (!role.equals("HR") && !role.equals("ADMIN")) {
+            if (!currentUserService.isSelf(employeeId)) {
+                throw new AccessDeniedException("You are not authorized to perform this action for this employee");
+            }
+        }
+    }
+
+    private void requireManagerSameBranchOrHrAdmin(Employee employee) {
+        var currentUser = currentUserService.getCurrentUser();
+        String role = currentUser.getRole();
+        if (role.equals("HR") || role.equals("ADMIN")) return;
+        if (role.equals("MANAGER")) {
+            Long managerBranchId = currentUser.getEmployee() != null && currentUser.getEmployee().getBranch() != null
+                    ? currentUser.getEmployee().getBranch().getId() : null;
+            Long employeeBranchId = employee.getBranch() != null ? employee.getBranch().getId() : null;
+            if (managerBranchId != null && managerBranchId.equals(employeeBranchId)) return;
+        }
+        throw new AccessDeniedException("Managers can only action leave requests for their own branch");
+    }
+
+    private void requireManagerOwnBranchOrHrAdmin(Long branchId) {
+        var currentUser = currentUserService.getCurrentUser();
+        String role = currentUser.getRole();
+        if (role.equals("HR") || role.equals("ADMIN")) return;
+        if (role.equals("MANAGER")) {
+            Long managerBranchId = currentUser.getEmployee() != null && currentUser.getEmployee().getBranch() != null
+                    ? currentUser.getEmployee().getBranch().getId() : null;
+            if (managerBranchId != null && managerBranchId.equals(branchId)) return;
+        }
+        throw new AccessDeniedException("You are not authorized to view leave requests for this branch");
     }
 }

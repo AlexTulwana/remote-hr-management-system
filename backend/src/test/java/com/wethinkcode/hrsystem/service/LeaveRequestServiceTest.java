@@ -65,6 +65,10 @@ class LeaveRequestServiceTest {
         dto.setEndDate(LocalDate.of(2026, 9, 5));
         dto.setReason("Family vacation");
 
+        User hrUser = new User();
+        hrUser.setRole("HR");
+        when(currentUserService.getCurrentUser()).thenReturn(hrUser);
+
         when(employeeRepository.findById(4L)).thenReturn(Optional.of(employee));
         when(leaveRequestRepository.save(any(LeaveRequest.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -79,6 +83,10 @@ class LeaveRequestServiceTest {
     @Test
     void submit_unknownEmployee_throwsException() {
         LeaveRequestDto dto = new LeaveRequestDto();
+
+        User hrUser = new User();
+        hrUser.setRole("HR");
+        when(currentUserService.getCurrentUser()).thenReturn(hrUser);
 
         when(employeeRepository.findById(99L)).thenReturn(Optional.empty());
 
@@ -95,6 +103,10 @@ class LeaveRequestServiceTest {
         dto.setEndDate(LocalDate.of(2026, 9, 2));
         dto.setReason("Flu");
 
+        User hrUser = new User();
+        hrUser.setRole("HR");
+        when(currentUserService.getCurrentUser()).thenReturn(hrUser);
+
         MockMultipartFile file = new MockMultipartFile("attachment", "note.pdf", "application/pdf", "content".getBytes());
 
         when(employeeRepository.findById(4L)).thenReturn(Optional.of(employee));
@@ -110,6 +122,10 @@ class LeaveRequestServiceTest {
     @Test
     void approve_setsStatusApproved() {
         when(leaveRequestRepository.findById(1L)).thenReturn(Optional.of(existingLeave));
+
+        User hrUser = new User();
+        hrUser.setRole("HR");
+        when(currentUserService.getCurrentUser()).thenReturn(hrUser);
         when(leaveRequestRepository.save(any(LeaveRequest.class))).thenAnswer(inv -> inv.getArgument(0));
 
         LeaveRequest result = leaveRequestService.approve(1L);
@@ -120,6 +136,10 @@ class LeaveRequestServiceTest {
     @Test
     void reject_setsStatusRejectedWithReason() {
         when(leaveRequestRepository.findById(1L)).thenReturn(Optional.of(existingLeave));
+
+        User hrUser = new User();
+        hrUser.setRole("HR");
+        when(currentUserService.getCurrentUser()).thenReturn(hrUser);
         when(leaveRequestRepository.save(any(LeaveRequest.class))).thenAnswer(inv -> inv.getArgument(0));
 
         LeaveRequest result = leaveRequestService.reject(1L, "Insufficient leave balance");
@@ -196,6 +216,10 @@ class LeaveRequestServiceTest {
     @Test
     void getByBranch_returnsLeaveRequestsForBranch() {
         when(leaveRequestRepository.findByEmployeeBranchId(1L)).thenReturn(List.of(existingLeave));
+
+        User hrUser = new User();
+        hrUser.setRole("HR");
+        when(currentUserService.getCurrentUser()).thenReturn(hrUser);
 
         List<LeaveRequest> result = leaveRequestService.getByBranch(1L);
 

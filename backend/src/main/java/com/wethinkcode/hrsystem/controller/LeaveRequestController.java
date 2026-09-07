@@ -61,6 +61,7 @@ public class LeaveRequestController {
         return ResponseEntity.ok(leaveRequestService.getByBranch(branchId));
     }
 
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<LeaveRequest>> getAll() {
         return ResponseEntity.ok(leaveRequestService.getAll());
