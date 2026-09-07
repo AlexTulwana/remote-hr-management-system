@@ -30,6 +30,7 @@ public class PerformanceReviewController {
         return ResponseEntity.ok(reviewService.getByEmployee(employeeId));
     }
 
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<PerformanceReview>> getAll() {
         return ResponseEntity.ok(reviewService.getAll());
