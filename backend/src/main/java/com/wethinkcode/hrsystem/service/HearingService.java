@@ -156,10 +156,20 @@ public class HearingService {
     }
 
     public List<Hearing> getByEmployee(Long employeeId) {
+        requireSelfOrHrAdmin(employeeId);
         return hearingRepository.findByEmployeeId(employeeId);
     }
 
     public List<Hearing> getAll() {
         return hearingRepository.findAll();
+    }
+
+    private void requireSelfOrHrAdmin(Long employeeId) {
+        String role = currentUserService.getCurrentUser().getRole();
+        if (!role.equals("HR") && !role.equals("ADMIN")) {
+            if (!currentUserService.isSelf(employeeId)) {
+                throw new AccessDeniedException("You are not authorized to view these hearings");
+            }
+        }
     }
 }

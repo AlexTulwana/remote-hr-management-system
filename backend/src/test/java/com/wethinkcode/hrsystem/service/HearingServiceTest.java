@@ -338,6 +338,8 @@ class HearingServiceTest {
     void getByEmployee_returnsHearingsForEmployee() {
         hearingService = serviceWithProvider(Optional.empty());
 
+        when(currentUserService.getCurrentUser()).thenReturn(conductedBy);
+
         when(hearingRepository.findByEmployeeId(4L)).thenReturn(List.of(existingHearing));
 
         assertThat(hearingService.getByEmployee(4L)).containsExactly(existingHearing);

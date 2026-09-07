@@ -35,6 +35,7 @@ public class HearingController {
         return ResponseEntity.ok(hearingService.updateOutcome(id, body.get("outcome"), body.get("notes")));
     }
 
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<Hearing> cancel(@PathVariable Long id) {
         return ResponseEntity.ok(hearingService.cancel(id));
@@ -50,16 +51,20 @@ public class HearingController {
         return ResponseEntity.ok(hearingService.getByEmployee(employeeId));
     }
 
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<Hearing>> getAll() {
+
         return ResponseEntity.ok(hearingService.getAll());
     }
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PostMapping("/{hearingId}/participants")
     public ResponseEntity<HearingParticipant> addParticipant(
             @PathVariable Long hearingId, @RequestBody HearingParticipantRequest request) {
         return ResponseEntity.ok(hearingService.addParticipant(hearingId, request));
     }
 
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping("/{hearingId}/participants")
     public ResponseEntity<List<HearingParticipant>> getParticipants(@PathVariable Long hearingId) {
         return ResponseEntity.ok(hearingService.getParticipants(hearingId));
