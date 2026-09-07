@@ -1,4 +1,4 @@
-package com.wethinkcode.hrsystem.service;
+        package com.wethinkcode.hrsystem.service;
 
 import com.wethinkcode.hrsystem.dto.EmployeeRequestSubmission;
 import com.wethinkcode.hrsystem.model.Branch;
@@ -64,24 +64,30 @@ class EmployeeRequestServiceTest {
 
         employeeUser = new User();
         employeeUser.setUsername("emptest1");
+        employeeUser.setRole("EMPLOYEE");
         employeeUser.setEmployee(employee);
 
         Employee managerEmployee = new Employee();
         managerEmployee.setId(3L);
         managerEmployee.setBranch(branch);
+
         managerUser = new User();
         managerUser.setUsername("mgrtest1");
+        managerUser.setRole("MANAGER");
         managerUser.setEmployee(managerEmployee);
 
         Employee otherManagerEmployee = new Employee();
         otherManagerEmployee.setId(5L);
         otherManagerEmployee.setBranch(otherBranch);
+
         otherBranchManagerUser = new User();
         otherBranchManagerUser.setUsername("othermgr");
+        otherBranchManagerUser.setRole("MANAGER");
         otherBranchManagerUser.setEmployee(otherManagerEmployee);
 
         hrUser = new User();
         hrUser.setUsername("hrtest2");
+        hrUser.setRole("HR");
 
         pendingRequest = new EmployeeRequest();
         pendingRequest.setId(1L);
@@ -143,7 +149,9 @@ class EmployeeRequestServiceTest {
         when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(managerUser));
         when(employeeRequestRepository.save(any(EmployeeRequest.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        EmployeeRequest result = employeeRequestService.managerDecision(1L, "APPROVED", "Looks fine", "mgrtest1");
+        EmployeeRequest result = employeeRequestService.managerDecision(
+                1L, "APPROVED", "Looks fine", "mgrtest1"
+        );
 
         assertThat(result.getStatus()).isEqualTo("APPROVED");
         assertThat(result.getManagerComment()).isEqualTo("Looks fine");
@@ -157,7 +165,9 @@ class EmployeeRequestServiceTest {
         when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(managerUser));
         when(employeeRequestRepository.save(any(EmployeeRequest.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        EmployeeRequest result = employeeRequestService.managerDecision(1L, "ESCALATED", "Needs HR review", "mgrtest1");
+        EmployeeRequest result = employeeRequestService.managerDecision(
+                1L, "ESCALATED", "Needs HR review", "mgrtest1"
+        );
 
         assertThat(result.getStatus()).isEqualTo("ESCALATED");
         assertThat(result.getResolvedAt()).isNull();
@@ -168,7 +178,11 @@ class EmployeeRequestServiceTest {
         when(employeeRequestRepository.findById(1L)).thenReturn(Optional.of(pendingRequest));
         when(userRepository.findByUsername("othermgr")).thenReturn(Optional.of(otherBranchManagerUser));
 
-        assertThatThrownBy(() -> employeeRequestService.managerDecision(1L, "APPROVED", "x", "othermgr"))
+        assertThatThrownBy(() ->
+                employeeRequestService.managerDecision(
+                        1L, "APPROVED", "x", "othermgr"
+                )
+        )
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessage("Managers can only action requests for their own branch");
     }
@@ -180,7 +194,11 @@ class EmployeeRequestServiceTest {
         when(employeeRequestRepository.findById(1L)).thenReturn(Optional.of(pendingRequest));
         when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(managerUser));
 
-        assertThatThrownBy(() -> employeeRequestService.managerDecision(1L, "REJECTED", "x", "mgrtest1"))
+        assertThatThrownBy(() ->
+                employeeRequestService.managerDecision(
+                        1L, "REJECTED", "x", "mgrtest1"
+                )
+        )
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Only pending requests can be actioned by a manager");
     }
@@ -190,7 +208,11 @@ class EmployeeRequestServiceTest {
         when(employeeRequestRepository.findById(1L)).thenReturn(Optional.of(pendingRequest));
         when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(managerUser));
 
-        assertThatThrownBy(() -> employeeRequestService.managerDecision(1L, "MAYBE", "x", "mgrtest1"))
+        assertThatThrownBy(() ->
+                employeeRequestService.managerDecision(
+                        1L, "MAYBE", "x", "mgrtest1"
+                )
+        )
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Invalid decision: MAYBE");
     }
@@ -204,7 +226,11 @@ class EmployeeRequestServiceTest {
         when(employeeRequestRepository.findById(1L)).thenReturn(Optional.of(pendingRequest));
         when(userRepository.findByUsername("hrtest2")).thenReturn(Optional.of(hrUser));
 
-        assertThatThrownBy(() -> employeeRequestService.hrDecision(1L, "APPROVED", "x", "hrtest2"))
+        assertThatThrownBy(() ->
+                employeeRequestService.hrDecision(
+                        1L, "APPROVED", "x", "hrtest2"
+                )
+        )
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Only escalated requests can be given a final HR decision");
     }
@@ -216,7 +242,11 @@ class EmployeeRequestServiceTest {
         when(employeeRequestRepository.findById(1L)).thenReturn(Optional.of(pendingRequest));
         when(userRepository.findByUsername("hrtest2")).thenReturn(Optional.of(hrUser));
 
-        assertThatThrownBy(() -> employeeRequestService.hrDecision(1L, "ESCALATED", "x", "hrtest2"))
+        assertThatThrownBy(() ->
+                employeeRequestService.hrDecision(
+                        1L, "ESCALATED", "x", "hrtest2"
+                )
+        )
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Invalid decision: ESCALATED");
     }
@@ -234,69 +264,90 @@ class EmployeeRequestServiceTest {
 
     @Test
     void getByEmployee_returnsRequestsForEmployee() {
-        when(employeeRequestRepository.findByEmployeeId(4L)).thenReturn(List.of(pendingRequest));
+        when(employeeRequestRepository.findByEmployeeId(4L))
+                .thenReturn(List.of(pendingRequest));
 
-        assertThat(employeeRequestService.getByEmployee(4L)).containsExactly(pendingRequest);
+        assertThat(employeeRequestService.getByEmployee(4L))
+                .containsExactly(pendingRequest);
     }
 
     @Test
     void getByBranch_returnsRequestsForBranch() {
-        when(employeeRequestRepository.findByEmployeeBranchId(1L)).thenReturn(List.of(pendingRequest));
+        when(employeeRequestRepository.findByEmployeeBranchId(1L))
+                .thenReturn(List.of(pendingRequest));
 
-        assertThat(employeeRequestService.getByBranch(1L)).containsExactly(pendingRequest);
+        assertThat(employeeRequestService.getByBranch(1L))
+                .containsExactly(pendingRequest);
     }
 
     @Test
     void getAll_returnsAllRequests() {
-        when(employeeRequestRepository.findAll()).thenReturn(List.of(pendingRequest));
+        when(employeeRequestRepository.findAll())
+                .thenReturn(List.of(pendingRequest));
 
-        assertThat(employeeRequestService.getAll()).containsExactly(pendingRequest);
+        assertThat(employeeRequestService.getAll())
+                .containsExactly(pendingRequest);
     }
 
     @Test
     void getEscalated_returnsOnlyEscalatedRequests() {
-        when(employeeRequestRepository.findByStatus("ESCALATED")).thenReturn(List.of(pendingRequest));
+        when(employeeRequestRepository.findByStatus("ESCALATED"))
+                .thenReturn(List.of(pendingRequest));
 
-        assertThat(employeeRequestService.getEscalated()).containsExactly(pendingRequest);
+        assertThat(employeeRequestService.getEscalated())
+                .containsExactly(pendingRequest);
     }
 
     // --- getById(Long, String) - new checked overload ---
 
     @Test
     void getById_self_returnsRequest() {
-        when(employeeRequestRepository.findById(1L)).thenReturn(Optional.of(pendingRequest));
-        when(userRepository.findByUsername("emptest1")).thenReturn(Optional.of(employeeUser));
+        when(employeeRequestRepository.findById(1L))
+                .thenReturn(Optional.of(pendingRequest));
+        when(userRepository.findByUsername("emptest1"))
+                .thenReturn(Optional.of(employeeUser));
 
-        EmployeeRequest result = employeeRequestService.getById(1L, "emptest1");
+        EmployeeRequest result =
+                employeeRequestService.getById(1L, "emptest1");
 
         assertThat(result).isEqualTo(pendingRequest);
     }
 
     @Test
     void getById_managerSameBranch_returnsRequest() {
-        when(employeeRequestRepository.findById(1L)).thenReturn(Optional.of(pendingRequest));
-        when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(managerUser));
+        when(employeeRequestRepository.findById(1L))
+                .thenReturn(Optional.of(pendingRequest));
+        when(userRepository.findByUsername("mgrtest1"))
+                .thenReturn(Optional.of(managerUser));
 
-        EmployeeRequest result = employeeRequestService.getById(1L, "mgrtest1");
+        EmployeeRequest result =
+                employeeRequestService.getById(1L, "mgrtest1");
 
         assertThat(result).isEqualTo(pendingRequest);
     }
 
     @Test
     void getById_managerDifferentBranch_throwsAccessDenied() {
-        when(employeeRequestRepository.findById(1L)).thenReturn(Optional.of(pendingRequest));
-        when(userRepository.findByUsername("othermgr")).thenReturn(Optional.of(otherBranchManagerUser));
+        when(employeeRequestRepository.findById(1L))
+                .thenReturn(Optional.of(pendingRequest));
+        when(userRepository.findByUsername("othermgr"))
+                .thenReturn(Optional.of(otherBranchManagerUser));
 
-        assertThatThrownBy(() -> employeeRequestService.getById(1L, "othermgr"))
+        assertThatThrownBy(() ->
+                employeeRequestService.getById(1L, "othermgr")
+        )
                 .isInstanceOf(AccessDeniedException.class);
     }
 
     @Test
     void getById_hr_returnsRequestRegardlessOfBranch() {
-        when(employeeRequestRepository.findById(1L)).thenReturn(Optional.of(pendingRequest));
-        when(userRepository.findByUsername("hrtest2")).thenReturn(Optional.of(hrUser));
+        when(employeeRequestRepository.findById(1L))
+                .thenReturn(Optional.of(pendingRequest));
+        when(userRepository.findByUsername("hrtest2"))
+                .thenReturn(Optional.of(hrUser));
 
-        EmployeeRequest result = employeeRequestService.getById(1L, "hrtest2");
+        EmployeeRequest result =
+                employeeRequestService.getById(1L, "hrtest2");
 
         assertThat(result).isEqualTo(pendingRequest);
     }
@@ -306,14 +357,19 @@ class EmployeeRequestServiceTest {
         Employee unrelatedEmployee = new Employee();
         unrelatedEmployee.setId(99L);
         unrelatedEmployee.setBranch(null);
+
         User unrelatedUser = new User();
         unrelatedUser.setUsername("unrelated");
         unrelatedUser.setEmployee(unrelatedEmployee);
 
-        when(employeeRequestRepository.findById(1L)).thenReturn(Optional.of(pendingRequest));
-        when(userRepository.findByUsername("unrelated")).thenReturn(Optional.of(unrelatedUser));
+        when(employeeRequestRepository.findById(1L))
+                .thenReturn(Optional.of(pendingRequest));
+        when(userRepository.findByUsername("unrelated"))
+                .thenReturn(Optional.of(unrelatedUser));
 
-        assertThatThrownBy(() -> employeeRequestService.getById(1L, "unrelated"))
+        assertThatThrownBy(() ->
+                employeeRequestService.getById(1L, "unrelated")
+        )
                 .isInstanceOf(AccessDeniedException.class);
     }
 
@@ -321,33 +377,44 @@ class EmployeeRequestServiceTest {
 
     @Test
     void getByEmployeeChecked_self_returnsRequests() {
-        when(employeeRepository.findById(4L)).thenReturn(Optional.of(employee));
-        when(userRepository.findByUsername("emptest1")).thenReturn(Optional.of(employeeUser));
-        when(employeeRequestRepository.findByEmployeeId(4L)).thenReturn(List.of(pendingRequest));
+        when(employeeRepository.findById(4L))
+                .thenReturn(Optional.of(employee));
+        when(userRepository.findByUsername("emptest1"))
+                .thenReturn(Optional.of(employeeUser));
+        when(employeeRequestRepository.findByEmployeeId(4L))
+                .thenReturn(List.of(pendingRequest));
 
-        List<EmployeeRequest> result = employeeRequestService.getByEmployee(4L, "emptest1");
+        List<EmployeeRequest> result =
+                employeeRequestService.getByEmployee(4L, "emptest1");
 
         assertThat(result).containsExactly(pendingRequest);
     }
 
     @Test
     void getByEmployeeChecked_managerSameBranch_returnsRequests() {
-        when(employeeRepository.findById(4L)).thenReturn(Optional.of(employee));
-        when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(managerUser));
-        when(employeeRequestRepository.findByEmployeeId(4L)).thenReturn(List.of(pendingRequest));
+        when(employeeRepository.findById(4L))
+                .thenReturn(Optional.of(employee));
+        when(userRepository.findByUsername("mgrtest1"))
+                .thenReturn(Optional.of(managerUser));
+        when(employeeRequestRepository.findByEmployeeId(4L))
+                .thenReturn(List.of(pendingRequest));
 
-        List<EmployeeRequest> result = employeeRequestService.getByEmployee(4L, "mgrtest1");
+        List<EmployeeRequest> result =
+                employeeRequestService.getByEmployee(4L, "mgrtest1");
 
         assertThat(result).containsExactly(pendingRequest);
     }
 
     @Test
     void getByEmployeeChecked_notSelfNotManagerNotHr_throwsAccessDenied() {
-        when(employeeRepository.findById(4L)).thenReturn(Optional.of(employee));
-        when(userRepository.findByUsername("othermgr")).thenReturn(Optional.of(otherBranchManagerUser));
+        when(employeeRepository.findById(4L))
+                .thenReturn(Optional.of(employee));
+        when(userRepository.findByUsername("othermgr"))
+                .thenReturn(Optional.of(otherBranchManagerUser));
 
-        assertThatThrownBy(() -> employeeRequestService.getByEmployee(4L, "othermgr"))
+        assertThatThrownBy(() ->
+                employeeRequestService.getByEmployee(4L, "othermgr")
+        )
                 .isInstanceOf(AccessDeniedException.class);
     }
-
 }
