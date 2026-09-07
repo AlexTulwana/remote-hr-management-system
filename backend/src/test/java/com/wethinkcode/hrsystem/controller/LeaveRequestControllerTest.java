@@ -1,6 +1,6 @@
+package com.wethinkcode.hrsystem.controller;
+import org.springframework.context.annotation.Import;
 
-
-import com.wethinkcode.hrsystem.controller.LeaveRequestController;
 import com.wethinkcode.hrsystem.dto.LeaveRequestDto;
 import com.wethinkcode.hrsystem.model.LeaveRequest;
 import com.wethinkcode.hrsystem.service.LeaveRequestService;
@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.wethinkcode.hrsystem.security.JwtUtil;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
@@ -20,10 +21,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(LeaveRequestController.class)
+@Import(com.wethinkcode.hrsystem.config.SecurityConfig.class)
 class LeaveRequestControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private JwtUtil jwtUtil;
 
     @MockitoBean
     private LeaveRequestService leaveRequestService;
