@@ -13,15 +13,17 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, String>> handleAccessDenied(AccessDeniedException ex) {
+        String message = ex.getMessage() != null ? ex.getMessage() : "Access denied";
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
-                .body(Map.of("error", ex.getMessage()));
+                .body(Map.of("error", message));
     }
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException ex) {
+        String message = ex.getMessage() != null ? ex.getMessage() : "Unknown error";
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", ex.getMessage()));
+                .body(Map.of("error", message));
     }
 }
