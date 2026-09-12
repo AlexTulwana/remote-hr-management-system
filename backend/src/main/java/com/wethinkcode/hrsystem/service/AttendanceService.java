@@ -52,6 +52,9 @@ public class AttendanceService {
         attendance.setClockOut(clockOutTime);
 
         Duration duration = Duration.between(attendance.getClockIn(), clockOutTime);
+        if (duration.isNegative()) {
+            duration = duration.plusDays(1);
+        }
         double hours = duration.toMinutes() / 60.0;
         attendance.setHoursWorked(Math.round(hours * 100.0) / 100.0);
 
