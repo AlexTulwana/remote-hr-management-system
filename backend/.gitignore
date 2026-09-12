@@ -40,3 +40,4 @@ uploads/
 
 # Local dev notes with credentials - never commit
 dev-notes.md
+.env
