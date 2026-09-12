@@ -12,6 +12,7 @@ import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.CalendarScopes;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Configuration;
 
 import java.io.File;
@@ -34,6 +35,7 @@ public class GoogleCalendarConfig {
     private static final String TOKENS_DIRECTORY_PATH = "tokens";
 
     @Bean
+    @Lazy
     public Calendar googleCalendarService() throws Exception {
         var httpTransport = GoogleNetHttpTransport.newTrustedTransport();
 

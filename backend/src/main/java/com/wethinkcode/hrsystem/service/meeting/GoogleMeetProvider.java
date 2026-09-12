@@ -7,6 +7,7 @@ import com.google.api.services.calendar.model.CreateConferenceRequest;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.EventDateTime;
 import com.google.api.client.util.DateTime;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 import java.time.ZoneId;
@@ -15,10 +16,10 @@ import java.util.UUID;
 @Component
 public class GoogleMeetProvider implements MeetingProvider {
 
-    private final Calendar calendarService;
+    private final ObjectProvider<Calendar> calendarServiceProvider;
 
-    public GoogleMeetProvider(Calendar calendarService) {
-        this.calendarService = calendarService;
+    public GoogleMeetProvider(ObjectProvider<Calendar> calendarServiceProvider) {
+        this.calendarServiceProvider = calendarServiceProvider;
     }
 
     @Override
@@ -42,6 +43,7 @@ public class GoogleMeetProvider implements MeetingProvider {
                             .setConferenceSolutionKey(new ConferenceSolutionKey().setType("hangoutsMeet")));
             event.setConferenceData(conferenceData);
 
+            Calendar calendarService = calendarServiceProvider.getObject();
             Event createdEvent = calendarService.events()
                     .insert("primary", event)
                     .setConferenceDataVersion(1)
