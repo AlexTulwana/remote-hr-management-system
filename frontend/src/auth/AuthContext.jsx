@@ -46,7 +46,9 @@ export function AuthProvider({ children }) {
       body: JSON.stringify({ username, password }),
     });
     localStorage.setItem('token', token);
-    setUser(decodeUser(token));
+    const decoded = decodeUser(token);
+    setUser(decoded);
+    return decoded?.role;
   }
 
   return (
