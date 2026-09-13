@@ -4,10 +4,10 @@ import { useAuth } from '../auth/AuthContext';
 import ErrorInline from '../components/ErrorInline';
 
 const ROLE_HOME = {
-  EMPLOYEE: '/employee',
-  MANAGER: '/manager',
-  HR: '/hr',
-  ADMIN: '/executive',
+  EMPLOYEE: '/profile',
+  MANAGER: '/profile',
+  HR: '/profile',
+  ADMIN: '/profile',
 };
 
 function CometRing() {
