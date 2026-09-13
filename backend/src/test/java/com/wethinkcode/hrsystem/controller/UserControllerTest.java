@@ -45,10 +45,12 @@ class UserControllerTest {
 
         Employee employee = new Employee();
         employee.setId(5L);
+        employee.setEmployeeNumber("EMP-0005");
         employee.setFullName("Emma Employee");
         employee.setPosition("Software Engineer");
         employee.setDepartment("Engineering");
         employee.setBranch(branch);
+        employee.setEmploymentStatus("ACTIVE");
 
         User user = new User();
         user.setId(1L);
@@ -64,9 +66,11 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.username").value("emptest1"))
                 .andExpect(jsonPath("$.role").value("EMPLOYEE"))
                 .andExpect(jsonPath("$.employeeId").value(5))
+                .andExpect(jsonPath("$.employeeNumber").value("EMP-0005"))
                 .andExpect(jsonPath("$.fullName").value("Emma Employee"))
                 .andExpect(jsonPath("$.position").value("Software Engineer"))
                 .andExpect(jsonPath("$.department").value("Engineering"))
-                .andExpect(jsonPath("$.branchName").value("Cape Town"));
+                .andExpect(jsonPath("$.branchName").value("Cape Town"))
+                .andExpect(jsonPath("$.employmentStatus").value("ACTIVE"));
     }
 }
