@@ -16,6 +16,11 @@ function decodeToken(token) {
   }
 }
 
+function hasValidSession() {
+  const token = localStorage.getItem('token');
+  return Boolean(token && decodeToken(token));
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -53,6 +58,20 @@ export function AuthProvider({ children }) {
       setLoading(false);
     }
     restoreSession();
+  }, []);
+
+  // Guard against the browser's back/forward cache (bfcache) restoring a
+  // frozen snapshot of a protected page after logout. If a bfcache restore
+  // happens and there's no valid session, force a hard reload so the app
+  // re-runs its real auth check instead of showing stale protected content.
+  useEffect(() => {
+    function handlePageShow(event) {
+      if (event.persisted && !hasValidSession()) {
+        window.location.reload();
+      }
+    }
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
   }, []);
 
   async function login(username, password) {
