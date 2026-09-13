@@ -2,10 +2,11 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import { apiFetch, setUnauthorizedHandler } from '../api/client';
+import { getMe } from '../api/users';
 
 const AuthContext = createContext(null);
 
-function decodeUser(token) {
+function decodeToken(token) {
   try {
     const payload = jwtDecode(token);
     if (payload.exp && payload.exp * 1000 < Date.now()) return null;
@@ -27,18 +28,32 @@ export function AuthProvider({ children }) {
   }, [navigate]);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      const decoded = decodeUser(token);
-      if (decoded) setUser(decoded);
-      else localStorage.removeItem('token');
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
     setUnauthorizedHandler(logout);
   }, [logout]);
+
+  useEffect(() => {
+    async function restoreSession() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      const decoded = decodeToken(token);
+      if (!decoded) {
+        localStorage.removeItem('token');
+        setLoading(false);
+        return;
+      }
+      try {
+        const profile = await getMe();
+        setUser({ ...decoded, ...profile });
+      } catch {
+        localStorage.removeItem('token');
+      }
+      setLoading(false);
+    }
+    restoreSession();
+  }, []);
 
   async function login(username, password) {
     const { token } = await apiFetch('/api/auth/login', {
@@ -46,9 +61,11 @@ export function AuthProvider({ children }) {
       body: JSON.stringify({ username, password }),
     });
     localStorage.setItem('token', token);
-    const decoded = decodeUser(token);
-    setUser(decoded);
-    return decoded?.role;
+    const decoded = decodeToken(token);
+    const profile = await getMe();
+    const fullUser = { ...decoded, ...profile };
+    setUser(fullUser);
+    return fullUser.role;
   }
 
   return (
