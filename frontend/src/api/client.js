@@ -1,5 +1,11 @@
 const BASE_URL = 'http://localhost:8080';
 
+let onUnauthorized = null;
+
+export function setUnauthorizedHandler(handler) {
+  onUnauthorized = handler;
+}
+
 function getToken() {
   return localStorage.getItem('token');
 }
@@ -16,8 +22,12 @@ export async function apiFetch(path, options = {}) {
   const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
   if (response.status === 401 || response.status === 403) {
-    localStorage.removeItem('token');
-    window.location.href = '/login';
+    if (onUnauthorized) {
+      onUnauthorized();
+    } else {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
     throw new Error('Unauthorized');
   }
 
