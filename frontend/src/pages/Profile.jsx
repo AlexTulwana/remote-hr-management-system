@@ -38,6 +38,8 @@ export default function Profile() {
       <Card>
         <p className="text-[13px] font-medium text-text-secondary mb-3.5">Employment details</p>
         <div className="grid grid-cols-2 gap-y-4 gap-x-6">
+          <Field label="Employee number" value={user.employeeNumber} />
+          <Field label="Employment status" value={user.employmentStatus} />
           <Field label="Position" value={user.position} />
           <Field label="Department" value={user.department} />
           <Field label="Branch" value={user.branchName} />
