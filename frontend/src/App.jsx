@@ -1,10 +1,14 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
+import Messages from './pages/Messages';
 import AppLayout from './components/AppLayout';
 import ProtectedRoute from './auth/ProtectedRoute';
 
-const TEMP_NAV = [{ to: '/profile', label: 'Profile' }];
+const TEMP_NAV = [
+  { to: '/profile', label: 'Profile' },
+  { to: '/messages', label: 'Messages' },
+];
 
 function App() {
   return (
@@ -16,6 +20,16 @@ function App() {
           <ProtectedRoute>
             <AppLayout navItems={TEMP_NAV}>
               <Profile />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/messages"
+        element={
+          <ProtectedRoute>
+            <AppLayout navItems={TEMP_NAV}>
+              <Messages />
             </AppLayout>
           </ProtectedRoute>
         }
