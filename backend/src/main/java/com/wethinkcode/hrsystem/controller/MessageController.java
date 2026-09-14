@@ -1,7 +1,7 @@
 package com.wethinkcode.hrsystem.controller;
 
 import com.wethinkcode.hrsystem.dto.MessageRequest;
-import com.wethinkcode.hrsystem.model.Message;
+import com.wethinkcode.hrsystem.dto.MessageResponse;
 import com.wethinkcode.hrsystem.service.MessageService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,22 +19,22 @@ public class MessageController {
     }
 
     @PostMapping
-    public ResponseEntity<Message> send(@RequestBody MessageRequest request) {
-        return ResponseEntity.ok(messageService.send(request));
+    public ResponseEntity<MessageResponse> send(@RequestBody MessageRequest request) {
+        return ResponseEntity.ok(MessageResponse.from(messageService.send(request)));
     }
 
     @GetMapping("/inbox/{userId}")
-    public ResponseEntity<List<Message>> getInbox(@PathVariable Long userId) {
-        return ResponseEntity.ok(messageService.getInbox(userId));
+    public ResponseEntity<List<MessageResponse>> getInbox(@PathVariable Long userId) {
+        return ResponseEntity.ok(messageService.getInbox(userId).stream().map(MessageResponse::from).toList());
     }
 
     @GetMapping("/unread/{userId}")
-    public ResponseEntity<List<Message>> getUnread(@PathVariable Long userId) {
-        return ResponseEntity.ok(messageService.getUnread(userId));
+    public ResponseEntity<List<MessageResponse>> getUnread(@PathVariable Long userId) {
+        return ResponseEntity.ok(messageService.getUnread(userId).stream().map(MessageResponse::from).toList());
     }
 
     @PatchMapping("/{messageId}/read")
-    public ResponseEntity<Message> markAsRead(@PathVariable Long messageId) {
-        return ResponseEntity.ok(messageService.markAsRead(messageId));
+    public ResponseEntity<MessageResponse> markAsRead(@PathVariable Long messageId) {
+        return ResponseEntity.ok(MessageResponse.from(messageService.markAsRead(messageId)));
     }
 }
