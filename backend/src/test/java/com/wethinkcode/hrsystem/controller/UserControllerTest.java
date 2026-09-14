@@ -3,6 +3,7 @@ package com.wethinkcode.hrsystem.controller;
 import com.wethinkcode.hrsystem.model.Branch;
 import com.wethinkcode.hrsystem.model.Employee;
 import com.wethinkcode.hrsystem.model.User;
+import com.wethinkcode.hrsystem.repository.UserRepository;
 import com.wethinkcode.hrsystem.security.CurrentUserService;
 import com.wethinkcode.hrsystem.security.JwtUtil;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -29,7 +32,36 @@ class UserControllerTest {
     private CurrentUserService currentUserService;
 
     @MockitoBean
+    private UserRepository userRepository;
+
+    @MockitoBean
     private JwtUtil jwtUtil;
+
+    private User buildUser(Long id, String username, Long employeeId, String fullName, String position, String branchName) {
+        Branch branch = null;
+        if (branchName != null) {
+            branch = new Branch();
+            branch.setName(branchName);
+        }
+
+        Employee employee = new Employee();
+        employee.setId(employeeId);
+        employee.setEmployeeNumber("EMP-" + employeeId);
+        employee.setFullName(fullName);
+        employee.setPosition(position);
+        employee.setDepartment("Engineering");
+        employee.setBranch(branch);
+        employee.setEmploymentStatus("ACTIVE");
+
+        User user = new User();
+        user.setId(id);
+        user.setUsername(username);
+        user.setRole("EMPLOYEE");
+        user.setEmployee(employee);
+        return user;
+    }
+
+    // ---- me() ----
 
     @Test
     void me_unauthenticated_isRejected() throws Exception {
@@ -40,24 +72,7 @@ class UserControllerTest {
     @Test
     @WithMockUser(roles = "EMPLOYEE")
     void me_authenticated_returnsCurrentUserDetails() throws Exception {
-        Branch branch = new Branch();
-        branch.setName("Cape Town");
-
-        Employee employee = new Employee();
-        employee.setId(5L);
-        employee.setEmployeeNumber("EMP-0005");
-        employee.setFullName("Emma Employee");
-        employee.setPosition("Software Engineer");
-        employee.setDepartment("Engineering");
-        employee.setBranch(branch);
-        employee.setEmploymentStatus("ACTIVE");
-
-        User user = new User();
-        user.setId(1L);
-        user.setUsername("emptest1");
-        user.setRole("EMPLOYEE");
-        user.setEmployee(employee);
-
+        User user = buildUser(1L, "emptest1", 5L, "Emma Employee", "Software Engineer", "Cape Town");
         when(currentUserService.getCurrentUser()).thenReturn(user);
 
         mockMvc.perform(get("/api/users/me"))
@@ -66,11 +81,38 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.username").value("emptest1"))
                 .andExpect(jsonPath("$.role").value("EMPLOYEE"))
                 .andExpect(jsonPath("$.employeeId").value(5))
-                .andExpect(jsonPath("$.employeeNumber").value("EMP-0005"))
+                .andExpect(jsonPath("$.employeeNumber").value("EMP-5"))
                 .andExpect(jsonPath("$.fullName").value("Emma Employee"))
                 .andExpect(jsonPath("$.position").value("Software Engineer"))
                 .andExpect(jsonPath("$.department").value("Engineering"))
                 .andExpect(jsonPath("$.branchName").value("Cape Town"))
                 .andExpect(jsonPath("$.employmentStatus").value("ACTIVE"));
+    }
+
+    // ---- lookup() ----
+
+    @Test
+    void lookup_unauthenticated_isRejected() throws Exception {
+        mockMvc.perform(get("/api/users/lookup").param("query", "Emma"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void lookup_returnsMatchingUsers_excludingSelf() throws Exception {
+        User self = buildUser(1L, "emptest1", 5L, "Emma Employee", "Software Engineer", "Cape Town");
+        User other = buildUser(2L, "emmaadmin", 6L, "Emma Admin", "HR Officer", "Durban");
+
+        when(currentUserService.getCurrentUser()).thenReturn(self);
+        when(userRepository.findByEmployeeFullNameContainingIgnoreCase("Emma"))
+                .thenReturn(List.of(self, other));
+
+        mockMvc.perform(get("/api/users/lookup").param("query", "Emma"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].userId").value(2))
+                .andExpect(jsonPath("$[0].fullName").value("Emma Admin"))
+                .andExpect(jsonPath("$[0].position").value("HR Officer"))
+                .andExpect(jsonPath("$[0].branchName").value("Durban"));
     }
 }
