@@ -18,6 +18,12 @@
   --color-danger-bg: #fcebeb;
   --color-danger-text: #a32d2d;
 
+  --color-info-bg: #e4edf5;
+  --color-info-text: #2c5c85;
+
+  --color-warning-bg: #faf1dd;
+  --color-warning-text: #93690f;
+
   --font-sans: 'Public Sans', sans-serif;
 }
 
