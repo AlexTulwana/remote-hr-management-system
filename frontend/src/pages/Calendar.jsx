@@ -65,12 +65,21 @@ function expandEventDays(item, monthStart, monthEnd) {
   return days;
 }
 
+function getWeekRange(date) {
+  const start = new Date(date);
+  start.setDate(start.getDate() - start.getDay());
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  return { start, end };
+}
+
 export default function Calendar() {
   const [monthCursor, setMonthCursor] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [selectedDateKey, setSelectedDateKey] = useState(null);
+  const [filterMode, setFilterMode] = useState('month');
   const [events, setEvents] = useState([]);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -91,7 +100,6 @@ export default function Calendar() {
     async function load() {
       setFetching(true);
       setError('');
-      setSelectedDateKey(null);
       try {
         const data = await getCalendar(toDateKey(monthStart), toDateKey(monthEnd));
         if (!cancelled) setEvents(data);
@@ -134,25 +142,58 @@ export default function Calendar() {
     return cells;
   }, [monthStart]);
 
+  const todayKey = toDateKey(new Date());
+
   const agendaEntries = useMemo(() => {
-    const keys = selectedDateKey
-      ? [selectedDateKey]
-      : Array.from(eventsByDay.keys()).sort();
+    let keys;
+    if (selectedDateKey) {
+      keys = [selectedDateKey];
+    } else if (filterMode === 'day') {
+      keys = [todayKey];
+    } else if (filterMode === 'week') {
+      const { start, end } = getWeekRange(new Date());
+      keys = [];
+      const cursor = new Date(start);
+      while (cursor <= end) {
+        keys.push(toDateKey(cursor));
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    } else {
+      keys = Array.from(eventsByDay.keys()).sort();
+    }
     return keys
       .filter((key) => eventsByDay.has(key))
       .map((key) => ({ key, date: parseDateKey(key), items: eventsByDay.get(key) }));
-  }, [selectedDateKey, eventsByDay]);
-
-  const todayKey = toDateKey(new Date());
+  }, [selectedDateKey, filterMode, eventsByDay, todayKey]);
 
   function goToMonth(offset) {
+    setSelectedDateKey(null);
+    setFilterMode('month');
     setMonthCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
   }
 
-  function goToToday() {
+  function jumpToCurrentMonth() {
     const now = new Date();
     setMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1));
   }
+
+  function handleFilterChange(mode) {
+    setSelectedDateKey(null);
+    setFilterMode(mode);
+    jumpToCurrentMonth();
+  }
+
+  function handleDayClick(key) {
+    setSelectedDateKey((prev) => (prev === key ? null : key));
+  }
+
+  const agendaHeading = selectedDateKey
+    ? formatDayLabel(parseDateKey(selectedDateKey))
+    : filterMode === 'day'
+      ? 'Today'
+      : filterMode === 'week'
+        ? 'This week'
+        : 'This month';
 
   return (
     <div>
@@ -160,7 +201,15 @@ export default function Calendar() {
         <p className="text-[20px] font-medium">Calendar</p>
         <div className="flex items-center gap-2">
           <Button variant="secondary" onClick={() => goToMonth(-1)}>&larr;</Button>
-          <Button variant="secondary" onClick={goToToday}>Today</Button>
+          <select
+            value={filterMode}
+            onChange={(e) => handleFilterChange(e.target.value)}
+            className="h-9 px-3 rounded-full text-[13px] font-medium bg-surface-2 border border-border-strong cursor-pointer"
+          >
+            <option value="day">Today</option>
+            <option value="week">This week</option>
+            <option value="month">This month</option>
+          </select>
           <Button variant="secondary" onClick={() => goToMonth(1)}>&rarr;</Button>
         </div>
       </div>
@@ -191,7 +240,7 @@ export default function Calendar() {
                 return (
                   <button
                     key={key}
-                    onClick={() => setSelectedDateKey(isSelected ? null : key)}
+                    onClick={() => handleDayClick(key)}
                     className={[
                       'aspect-square rounded-lg p-1.5 flex flex-col items-start text-left cursor-pointer transition-colors',
                       inMonth ? 'bg-surface-2' : 'bg-surface-0',
@@ -226,9 +275,7 @@ export default function Calendar() {
             </div>
           </Card>
 
-          <p className="text-[13px] font-medium text-text-secondary mt-5 mb-2.5">
-            {selectedDateKey ? formatDayLabel(parseDateKey(selectedDateKey)) : 'This month'}
-          </p>
+          <p className="text-[13px] font-medium text-text-secondary mt-5 mb-2.5">{agendaHeading}</p>
 
           {agendaEntries.length === 0 ? (
             <Card>
