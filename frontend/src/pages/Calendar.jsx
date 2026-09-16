@@ -72,7 +72,8 @@ export default function Calendar() {
   });
   const [selectedDateKey, setSelectedDateKey] = useState(null);
   const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
 
   const monthStart = useMemo(
@@ -83,23 +84,32 @@ export default function Calendar() {
     () => new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 0),
     [monthCursor]
   );
+  const monthKey = `${monthCursor.getFullYear()}-${monthCursor.getMonth()}`;
 
   useEffect(() => {
+    let cancelled = false;
     async function load() {
-      setLoading(true);
+      setFetching(true);
       setError('');
       setSelectedDateKey(null);
       try {
         const data = await getCalendar(toDateKey(monthStart), toDateKey(monthEnd));
-        setEvents(data);
+        if (!cancelled) setEvents(data);
       } catch {
-        setError('Could not load the calendar.');
+        if (!cancelled) setError('Could not load the calendar.');
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setFetching(false);
+          setHasLoaded(true);
+        }
       }
     }
     load();
-  }, [monthStart, monthEnd]);
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthKey]);
 
   const eventsByDay = useMemo(() => {
     const map = new Map();
@@ -155,7 +165,7 @@ export default function Calendar() {
         </div>
       </div>
 
-      {loading ? (
+      {!hasLoaded && fetching ? (
         <div className="flex flex-col gap-3.5">
           <SkeletonCard />
           <SkeletonCard />
@@ -163,7 +173,7 @@ export default function Calendar() {
       ) : error ? (
         <ErrorInline message={error} />
       ) : (
-        <>
+        <div className={fetching ? 'opacity-50 pointer-events-none transition-opacity' : 'transition-opacity'}>
           <Card>
             <p className="text-[15px] font-medium mb-3">{formatMonthLabel(monthCursor)}</p>
             <div className="grid grid-cols-7 gap-1.5">
@@ -256,7 +266,7 @@ export default function Calendar() {
               ))}
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );
