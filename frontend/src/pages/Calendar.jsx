@@ -190,9 +190,10 @@ export default function Calendar() {
                   >
                     <span
                       className={[
-                        'text-[12px]',
-                        inMonth ? 'text-text-primary' : 'text-text-muted',
-                        isToday ? 'font-semibold' : '',
+                        'text-[12px] w-5 h-5 flex items-center justify-center rounded-full',
+                        isToday
+                          ? 'bg-text-primary text-surface-2 font-semibold'
+                          : inMonth ? 'text-text-primary' : 'text-text-muted',
                       ].join(' ')}
                     >
                       {date.getDate()}
