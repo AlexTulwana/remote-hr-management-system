@@ -3,6 +3,7 @@ import Login from './pages/Login';
 import Profile from './pages/Profile';
 import Messages from './pages/Messages';
 import Announcements from './pages/Announcements';
+import Calendar from './pages/Calendar';
 import AppLayout from './components/AppLayout';
 import ProtectedRoute from './auth/ProtectedRoute';
 
@@ -10,6 +11,7 @@ const TEMP_NAV = [
   { to: '/profile', label: 'Profile' },
   { to: '/messages', label: 'Messages' },
   { to: '/announcements', label: 'Announcements' },
+  { to: '/calendar', label: 'Calendar' },
 ];
 
 function App() {
@@ -42,6 +44,16 @@ function App() {
           <ProtectedRoute>
             <AppLayout navItems={TEMP_NAV}>
               <Announcements />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/calendar"
+        element={
+          <ProtectedRoute>
+            <AppLayout navItems={TEMP_NAV}>
+              <Calendar />
             </AppLayout>
           </ProtectedRoute>
         }
