@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import ErrorInline from '../components/ErrorInline';
 
 const ROLE_HOME = {
-  EMPLOYEE: '/profile',
+  EMPLOYEE: '/employee/dashboard',
   MANAGER: '/profile',
   HR: '/profile',
   ADMIN: '/profile',
