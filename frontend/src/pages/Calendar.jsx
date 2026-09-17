@@ -243,7 +243,7 @@ export default function Calendar() {
                     onClick={() => handleDayClick(key)}
                     className={[
                       'aspect-square rounded-lg p-1.5 flex flex-col items-start text-left cursor-pointer transition-colors',
-                      inMonth ? 'bg-surface-2' : 'bg-surface-0',
+                      isToday ? 'bg-surface-1' : inMonth ? 'bg-surface-2' : 'bg-surface-0',
                       isSelected ? 'border border-text-primary' : 'border border-transparent',
                     ].join(' ')}
                   >
