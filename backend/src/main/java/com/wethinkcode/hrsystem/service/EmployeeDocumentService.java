@@ -16,6 +16,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -23,6 +24,14 @@ public class EmployeeDocumentService {
 
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     private static final List<String> ALLOWED_EXTENSIONS = List.of(".pdf", ".jpg", ".jpeg", ".png", ".docx");
+
+    // Document types an employee/manager may upload for their OWN record.
+    // Employer-issued/sensitive types (CONTRACT, DISCIPLINARY, OTHER) stay HR/Admin only.
+    private static final Set<DocumentType> SELF_UPLOADABLE_TYPES = Set.of(
+            DocumentType.ID_COPY, DocumentType.QUALIFICATION, DocumentType.CV,
+            DocumentType.COVER_LETTER, DocumentType.MEDICAL_CERTIFICATE, DocumentType.TAX_DOCUMENT
+    );
+
     private final String uploadDir;
 
     private final EmployeeDocumentRepository documentRepository;
@@ -51,8 +60,17 @@ public class EmployeeDocumentService {
     public EmployeeDocument upload(Long employeeId, MultipartFile file, DocumentType type,
                                    String description, String uploaderUsername) {
         User uploader = currentUser(uploaderUsername);
+
         if (!isHrOrAdmin(uploader)) {
-            throw new AccessDeniedException("Only HR or Admin may upload employee documents");
+            boolean isOwnRecord = uploader.getEmployee() != null
+                    && uploader.getEmployee().getId().equals(employeeId);
+
+            if (!isOwnRecord) {
+                throw new AccessDeniedException("You may only upload documents for your own record");
+            }
+            if (!SELF_UPLOADABLE_TYPES.contains(type)) {
+                throw new AccessDeniedException("You are not permitted to upload this document type");
+            }
         }
 
         Employee employee = employeeRepository.findById(employeeId)
