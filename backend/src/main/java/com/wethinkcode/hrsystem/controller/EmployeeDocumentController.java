@@ -28,8 +28,8 @@ public class EmployeeDocumentController {
         this.documentService = documentService;
     }
 
-    // PROTECTED - HR/Admin only
-    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+    // Access checked in service: HR/Admin may upload any type for any employee;
+    // an employee/manager may self-upload permitted types for their own record.
     @PostMapping(value = "/{employeeId}/documents", consumes = "multipart/form-data")
     public ResponseEntity<EmployeeDocumentResponse> upload(@PathVariable Long employeeId,
                                                    @RequestParam MultipartFile file,
