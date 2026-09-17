@@ -1,5 +1,6 @@
 package com.wethinkcode.hrsystem.controller;
 
+import com.wethinkcode.hrsystem.dto.EmployeeDocumentResponse;
 import com.wethinkcode.hrsystem.model.DocumentType;
 import com.wethinkcode.hrsystem.model.EmployeeDocument;
 import com.wethinkcode.hrsystem.service.EmployeeDocumentService;
@@ -30,21 +31,25 @@ public class EmployeeDocumentController {
     // PROTECTED - HR/Admin only
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PostMapping(value = "/{employeeId}/documents", consumes = "multipart/form-data")
-    public ResponseEntity<EmployeeDocument> upload(@PathVariable Long employeeId,
+    public ResponseEntity<EmployeeDocumentResponse> upload(@PathVariable Long employeeId,
                                                    @RequestParam MultipartFile file,
                                                    @RequestParam DocumentType documentType,
                                                    @RequestParam(required = false) String description,
                                                    Authentication authentication) {
         EmployeeDocument doc = documentService.upload(employeeId, file, documentType, description,
                 authentication.getName());
-        return ResponseEntity.status(HttpStatus.CREATED).body(doc);
+        return ResponseEntity.status(HttpStatus.CREATED).body(EmployeeDocumentResponse.from(doc));
     }
 
     // PROTECTED - HR/Admin see any employee's docs, employee sees only their own
     @GetMapping("/{employeeId}/documents")
-    public ResponseEntity<List<EmployeeDocument>> list(@PathVariable Long employeeId,
+    public ResponseEntity<List<EmployeeDocumentResponse>> list(@PathVariable Long employeeId,
                                                        Authentication authentication) {
-        return ResponseEntity.ok(documentService.list(employeeId, authentication.getName()));
+        List<EmployeeDocumentResponse> docs = documentService.list(employeeId, authentication.getName())
+                .stream()
+                .map(EmployeeDocumentResponse::from)
+                .toList();
+        return ResponseEntity.ok(docs);
     }
 
     @GetMapping("/documents/{id}/download")
