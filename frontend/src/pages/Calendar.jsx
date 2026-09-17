@@ -130,7 +130,7 @@ export default function Calendar() {
     return map;
   }, [events, monthStart, monthEnd]);
 
-  const gridDays = useMemo(() => {
+  const monthGridDays = useMemo(() => {
     const cells = [];
     const leading = monthStart.getDay();
     const cursor = new Date(monthStart);
@@ -142,6 +142,17 @@ export default function Calendar() {
     return cells;
   }, [monthStart]);
 
+  const weekGridDays = useMemo(() => {
+    const { start } = getWeekRange(new Date());
+    const cells = [];
+    const cursor = new Date(start);
+    for (let i = 0; i < 7; i += 1) {
+      cells.push(new Date(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return cells;
+  }, []);
+
   const todayKey = toDateKey(new Date());
 
   const agendaEntries = useMemo(() => {
@@ -151,20 +162,14 @@ export default function Calendar() {
     } else if (filterMode === 'day') {
       keys = [todayKey];
     } else if (filterMode === 'week') {
-      const { start, end } = getWeekRange(new Date());
-      keys = [];
-      const cursor = new Date(start);
-      while (cursor <= end) {
-        keys.push(toDateKey(cursor));
-        cursor.setDate(cursor.getDate() + 1);
-      }
+      keys = weekGridDays.map(toDateKey);
     } else {
       keys = Array.from(eventsByDay.keys()).sort();
     }
     return keys
       .filter((key) => eventsByDay.has(key))
       .map((key) => ({ key, date: parseDateKey(key), items: eventsByDay.get(key) }));
-  }, [selectedDateKey, filterMode, eventsByDay, todayKey]);
+  }, [selectedDateKey, filterMode, eventsByDay, todayKey, weekGridDays]);
 
   function goToMonth(offset) {
     setSelectedDateKey(null);
@@ -195,6 +200,53 @@ export default function Calendar() {
         ? 'This week'
         : 'This month';
 
+  const gridTitle =
+    filterMode === 'week'
+      ? `Week of ${formatShortDate(weekGridDays[0])} \u2013 ${formatShortDate(weekGridDays[6])}`
+      : formatMonthLabel(monthCursor);
+
+  function renderDayCell(date) {
+    const key = toDateKey(date);
+    const inMonth = filterMode === 'month' ? date.getMonth() === monthCursor.getMonth() : true;
+    const dayEvents = eventsByDay.get(key) || [];
+    const isSelected = selectedDateKey === key;
+    const isToday = key === todayKey;
+    return (
+      <button
+        key={key}
+        onClick={() => handleDayClick(key)}
+        className={[
+          'aspect-square rounded-lg p-1.5 flex flex-col items-start text-left cursor-pointer transition-colors',
+          isToday ? 'bg-surface-1' : inMonth ? 'bg-surface-2' : 'bg-surface-0',
+          isSelected ? 'border border-text-primary' : 'border border-transparent',
+        ].join(' ')}
+      >
+        <span
+          className={[
+            'text-[12px] w-5 h-5 flex items-center justify-center rounded-full',
+            isToday
+              ? 'bg-text-primary text-surface-2 font-semibold'
+              : inMonth ? 'text-text-primary' : 'text-text-muted',
+          ].join(' ')}
+        >
+          {date.getDate()}
+        </span>
+        <div className="flex flex-wrap gap-0.5 mt-auto">
+          {dayEvents.slice(0, 3).map((item, i) => (
+            <span
+              key={`${item.sourceType}-${item.sourceId}-${i}`}
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ background: DOT_COLORS[item.sourceType] || 'var(--color-text-muted)' }}
+            />
+          ))}
+          {dayEvents.length > 3 ? (
+            <span className="text-[9px] text-text-muted leading-none">+{dayEvents.length - 3}</span>
+          ) : null}
+        </div>
+      </button>
+    );
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-5">
@@ -223,57 +275,19 @@ export default function Calendar() {
         <ErrorInline message={error} />
       ) : (
         <div className={fetching ? 'opacity-50 pointer-events-none transition-opacity' : 'transition-opacity'}>
-          <Card>
-            <p className="text-[15px] font-medium mb-3">{formatMonthLabel(monthCursor)}</p>
-            <div className="grid grid-cols-7 gap-1.5">
-              {WEEKDAY_LABELS.map((label) => (
-                <div key={label} className="text-[11px] text-text-muted text-center py-1">
-                  {label}
-                </div>
-              ))}
-              {gridDays.map((date) => {
-                const key = toDateKey(date);
-                const inMonth = date.getMonth() === monthCursor.getMonth();
-                const dayEvents = eventsByDay.get(key) || [];
-                const isSelected = selectedDateKey === key;
-                const isToday = key === todayKey;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => handleDayClick(key)}
-                    className={[
-                      'aspect-square rounded-lg p-1.5 flex flex-col items-start text-left cursor-pointer transition-colors',
-                      isToday ? 'bg-surface-1' : inMonth ? 'bg-surface-2' : 'bg-surface-0',
-                      isSelected ? 'border border-text-primary' : 'border border-transparent',
-                    ].join(' ')}
-                  >
-                    <span
-                      className={[
-                        'text-[12px] w-5 h-5 flex items-center justify-center rounded-full',
-                        isToday
-                          ? 'bg-text-primary text-surface-2 font-semibold'
-                          : inMonth ? 'text-text-primary' : 'text-text-muted',
-                      ].join(' ')}
-                    >
-                      {date.getDate()}
-                    </span>
-                    <div className="flex flex-wrap gap-0.5 mt-auto">
-                      {dayEvents.slice(0, 3).map((item, i) => (
-                        <span
-                          key={`${item.sourceType}-${item.sourceId}-${i}`}
-                          className="w-1.5 h-1.5 rounded-full"
-                          style={{ background: DOT_COLORS[item.sourceType] || 'var(--color-text-muted)' }}
-                        />
-                      ))}
-                      {dayEvents.length > 3 ? (
-                        <span className="text-[9px] text-text-muted leading-none">+{dayEvents.length - 3}</span>
-                      ) : null}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </Card>
+          {filterMode !== 'day' ? (
+            <Card>
+              <p className="text-[15px] font-medium mb-3">{gridTitle}</p>
+              <div className="grid grid-cols-7 gap-1.5">
+                {WEEKDAY_LABELS.map((label) => (
+                  <div key={label} className="text-[11px] text-text-muted text-center py-1">
+                    {label}
+                  </div>
+                ))}
+                {(filterMode === 'week' ? weekGridDays : monthGridDays).map(renderDayCell)}
+              </div>
+            </Card>
+          ) : null}
 
           <p className="text-[13px] font-medium text-text-secondary mt-5 mb-2.5">{agendaHeading}</p>
 
