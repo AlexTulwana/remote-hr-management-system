@@ -1,7 +1,7 @@
 package com.wethinkcode.hrsystem.controller;
 
 import com.wethinkcode.hrsystem.dto.LeaveRequestDto;
-import com.wethinkcode.hrsystem.model.LeaveRequest;
+import com.wethinkcode.hrsystem.dto.LeaveRequestSummary;
 import com.wethinkcode.hrsystem.service.LeaveRequestService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,7 +22,7 @@ public class LeaveRequestController {
     }
 
     @PostMapping(value = "/{employeeId}", consumes = "multipart/form-data")
-    public ResponseEntity<LeaveRequest> submit(
+    public ResponseEntity<LeaveRequestSummary> submit(
             @PathVariable Long employeeId,
             @RequestParam String leaveType,
             @RequestParam String startDate,
@@ -36,34 +36,37 @@ public class LeaveRequestController {
         dto.setEndDate(java.time.LocalDate.parse(endDate));
         dto.setReason(reason);
 
-        return ResponseEntity.ok(leaveRequestService.submit(employeeId, dto, attachment));
+        return ResponseEntity.ok(LeaveRequestSummary.from(leaveRequestService.submit(employeeId, dto, attachment)));
     }
 
     @PreAuthorize("hasRole('MANAGER') or hasRole('HR') or hasRole('ADMIN')")
     @PatchMapping("/{leaveId}/approve")
-    public ResponseEntity<LeaveRequest> approve(@PathVariable Long leaveId) {
-        return ResponseEntity.ok(leaveRequestService.approve(leaveId));
+    public ResponseEntity<LeaveRequestSummary> approve(@PathVariable Long leaveId) {
+        return ResponseEntity.ok(LeaveRequestSummary.from(leaveRequestService.approve(leaveId)));
     }
 
     @PreAuthorize("hasRole('MANAGER') or hasRole('HR') or hasRole('ADMIN')")
     @PatchMapping("/{leaveId}/reject")
-    public ResponseEntity<LeaveRequest> reject(@PathVariable Long leaveId, @RequestBody Map<String, String> body) {
-        return ResponseEntity.ok(leaveRequestService.reject(leaveId, body.get("reason")));
+    public ResponseEntity<LeaveRequestSummary> reject(@PathVariable Long leaveId, @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(LeaveRequestSummary.from(leaveRequestService.reject(leaveId, body.get("reason"))));
     }
 
     @GetMapping("/employee/{employeeId}")
-    public ResponseEntity<List<LeaveRequest>> getByEmployee(@PathVariable Long employeeId) {
-        return ResponseEntity.ok(leaveRequestService.getByEmployee(employeeId));
+    public ResponseEntity<List<LeaveRequestSummary>> getByEmployee(@PathVariable Long employeeId) {
+        return ResponseEntity.ok(leaveRequestService.getByEmployee(employeeId).stream()
+                .map(LeaveRequestSummary::from).toList());
     }
 
     @GetMapping("/branch/{branchId}")
-    public ResponseEntity<List<LeaveRequest>> getByBranch(@PathVariable Long branchId) {
-        return ResponseEntity.ok(leaveRequestService.getByBranch(branchId));
+    public ResponseEntity<List<LeaveRequestSummary>> getByBranch(@PathVariable Long branchId) {
+        return ResponseEntity.ok(leaveRequestService.getByBranch(branchId).stream()
+                .map(LeaveRequestSummary::from).toList());
     }
 
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping
-    public ResponseEntity<List<LeaveRequest>> getAll() {
-        return ResponseEntity.ok(leaveRequestService.getAll());
+    public ResponseEntity<List<LeaveRequestSummary>> getAll() {
+        return ResponseEntity.ok(leaveRequestService.getAll().stream()
+                .map(LeaveRequestSummary::from).toList());
     }
 }
