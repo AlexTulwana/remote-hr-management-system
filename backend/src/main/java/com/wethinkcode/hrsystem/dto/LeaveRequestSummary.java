@@ -15,6 +15,7 @@ public class LeaveRequestSummary {
     private String reason;
     private String status;
     private String rejectionReason;
+    private boolean hasAttachment;
     private EmployeeSummary employee;
 
     public static LeaveRequestSummary from(com.wethinkcode.hrsystem.model.LeaveRequest r) {
@@ -26,7 +27,8 @@ public class LeaveRequestSummary {
                 r.getReason(),
                 r.getStatus(),
                 r.getRejectionReason(),
-                EmployeeSummary.from(r.getEmployee())
+                r.getAttachmentPath() != null,
+                r.getEmployee() != null ? EmployeeSummary.from(r.getEmployee()) : null
         );
     }
 }
