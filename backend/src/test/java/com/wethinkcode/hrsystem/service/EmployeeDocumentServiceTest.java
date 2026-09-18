@@ -38,7 +38,9 @@ class EmployeeDocumentServiceTest {
 
     private User hrUser;
     private User employeeUser;
+    private User managerUser;
     private Employee employee;
+    private Employee managerEmployee;
 
     @BeforeEach
     void setUp() {
@@ -51,6 +53,10 @@ class EmployeeDocumentServiceTest {
         employee.setId(1L);
         employee.setFullName("Emma Employee");
 
+        managerEmployee = new Employee();
+        managerEmployee.setId(3L);
+        managerEmployee.setFullName("Mark Manager");
+
         hrUser = new User();
         hrUser.setId(10L);
         hrUser.setUsername("hrtest2");
@@ -61,20 +67,15 @@ class EmployeeDocumentServiceTest {
         employeeUser.setUsername("emptest1");
         employeeUser.setRole("EMPLOYEE");
         employeeUser.setEmployee(employee);
+
+        managerUser = new User();
+        managerUser.setId(30L);
+        managerUser.setUsername("mgrtest1");
+        managerUser.setRole("MANAGER");
+        managerUser.setEmployee(managerEmployee);
     }
 
-    // ---------- upload() ----------
-
-    @Test
-    void upload_nonHrUser_throwsAccessDenied() {
-        when(userRepository.findByUsername("emptest1")).thenReturn(Optional.of(employeeUser));
-
-        MockMultipartFile file = new MockMultipartFile("file", "cv.pdf", "application/pdf", "content".getBytes());
-
-        assertThrows(AccessDeniedException.class,
-                () -> documentService.upload(1L, file, DocumentType.CV, "desc", "emptest1"));
-        verifyNoInteractions(employeeRepository, documentRepository);
-    }
+    // ---------- upload() - HR/Admin (unrestricted) ----------
 
     @Test
     void upload_employeeNotFound_throwsException() {
@@ -157,6 +158,110 @@ class EmployeeDocumentServiceTest {
         // saved filename is a UUID + lowercase extension, not the original name
         assertNotEquals("weird name!@#.PDF", result.getFileName());
         assertTrue(result.getFileName().endsWith(".pdf"));
+    }
+
+    @Test
+    void upload_hrUser_restrictedType_forOtherEmployee_success() {
+        // HR is not subject to the self-upload type restriction
+        when(userRepository.findByUsername("hrtest2")).thenReturn(Optional.of(hrUser));
+        when(employeeRepository.findById(1L)).thenReturn(Optional.of(employee));
+        when(documentRepository.save(any(EmployeeDocument.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        MockMultipartFile file = new MockMultipartFile("file", "contract.pdf", "application/pdf", "content".getBytes());
+
+        EmployeeDocument result = documentService.upload(1L, file, DocumentType.CONTRACT, "signed contract", "hrtest2");
+
+        assertEquals(DocumentType.CONTRACT, result.getDocumentType());
+    }
+
+    // ---------- upload() - self-upload (employee/manager) ----------
+
+    @Test
+    void upload_employeeOwnRecord_permittedType_success() {
+        when(userRepository.findByUsername("emptest1")).thenReturn(Optional.of(employeeUser));
+        when(employeeRepository.findById(1L)).thenReturn(Optional.of(employee));
+        when(documentRepository.save(any(EmployeeDocument.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        MockMultipartFile file = new MockMultipartFile("file", "sick-note.pdf", "application/pdf", "content".getBytes());
+
+        EmployeeDocument result = documentService.upload(1L, file, DocumentType.MEDICAL_CERTIFICATE,
+                "sick leave proof", "emptest1");
+
+        assertEquals(DocumentType.MEDICAL_CERTIFICATE, result.getDocumentType());
+        assertEquals(employeeUser, result.getUploadedBy());
+    }
+
+    @Test
+    void upload_employeeOwnRecord_taxDocument_success() {
+        when(userRepository.findByUsername("emptest1")).thenReturn(Optional.of(employeeUser));
+        when(employeeRepository.findById(1L)).thenReturn(Optional.of(employee));
+        when(documentRepository.save(any(EmployeeDocument.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        MockMultipartFile file = new MockMultipartFile("file", "tax.pdf", "application/pdf", "content".getBytes());
+
+        EmployeeDocument result = documentService.upload(1L, file, DocumentType.TAX_DOCUMENT, null, "emptest1");
+
+        assertEquals(DocumentType.TAX_DOCUMENT, result.getDocumentType());
+    }
+
+    @Test
+    void upload_managerOwnRecord_permittedType_success() {
+        when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(managerUser));
+        when(employeeRepository.findById(3L)).thenReturn(Optional.of(managerEmployee));
+        when(documentRepository.save(any(EmployeeDocument.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        MockMultipartFile file = new MockMultipartFile("file", "qualification.pdf", "application/pdf", "content".getBytes());
+
+        EmployeeDocument result = documentService.upload(3L, file, DocumentType.QUALIFICATION, null, "mgrtest1");
+
+        assertEquals(DocumentType.QUALIFICATION, result.getDocumentType());
+    }
+
+    @Test
+    void upload_employeeOwnRecord_restrictedType_throwsAccessDenied() {
+        when(userRepository.findByUsername("emptest1")).thenReturn(Optional.of(employeeUser));
+
+        MockMultipartFile file = new MockMultipartFile("file", "contract.pdf", "application/pdf", "content".getBytes());
+
+        assertThrows(AccessDeniedException.class,
+                () -> documentService.upload(1L, file, DocumentType.CONTRACT, "desc", "emptest1"));
+        verifyNoInteractions(employeeRepository, documentRepository);
+    }
+
+    @Test
+    void upload_employeeOwnRecord_disciplinaryType_throwsAccessDenied() {
+        when(userRepository.findByUsername("emptest1")).thenReturn(Optional.of(employeeUser));
+
+        MockMultipartFile file = new MockMultipartFile("file", "warning.pdf", "application/pdf", "content".getBytes());
+
+        assertThrows(AccessDeniedException.class,
+                () -> documentService.upload(1L, file, DocumentType.DISCIPLINARY, "desc", "emptest1"));
+    }
+
+    @Test
+    void upload_employeeOtherEmployeeRecord_throwsAccessDenied() {
+        when(userRepository.findByUsername("emptest1")).thenReturn(Optional.of(employeeUser));
+
+        MockMultipartFile file = new MockMultipartFile("file", "cv.pdf", "application/pdf", "content".getBytes());
+
+        // employeeUser's own record is id 1L, attempting to upload for id 2L
+        assertThrows(AccessDeniedException.class,
+                () -> documentService.upload(2L, file, DocumentType.CV, "desc", "emptest1"));
+        verifyNoInteractions(employeeRepository, documentRepository);
+    }
+
+    @Test
+    void upload_userWithNoLinkedEmployee_throwsAccessDenied() {
+        User orphan = new User();
+        orphan.setUsername("orphan");
+        orphan.setRole("EMPLOYEE");
+        orphan.setEmployee(null);
+        when(userRepository.findByUsername("orphan")).thenReturn(Optional.of(orphan));
+
+        MockMultipartFile file = new MockMultipartFile("file", "cv.pdf", "application/pdf", "content".getBytes());
+
+        assertThrows(AccessDeniedException.class,
+                () -> documentService.upload(1L, file, DocumentType.CV, "desc", "orphan"));
     }
 
     // ---------- list() ----------
