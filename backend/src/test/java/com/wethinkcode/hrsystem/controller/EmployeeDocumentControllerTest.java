@@ -40,16 +40,36 @@ class EmployeeDocumentControllerTest {
     @TempDir
     Path tempDir;
 
-    // ---- upload (HR/ADMIN) ----
+    // ---- upload: no @PreAuthorize, access checked in service ----
 
     @Test
-    @WithMockUser(roles = "EMPLOYEE")
-    void upload_employeeRole_isForbidden() throws Exception {
-        MockMultipartFile file = new MockMultipartFile("file", "cv.pdf", "application/pdf", "content".getBytes());
+    @WithMockUser(username = "emptest1", roles = "EMPLOYEE")
+    void upload_allowedByService_returnsCreated() throws Exception {
+        EmployeeDocument saved = new EmployeeDocument();
+        saved.setFileName("abc.pdf");
+        when(documentService.upload(anyLong(), any(), any(DocumentType.class), any(), anyString()))
+                .thenReturn(saved);
+
+        MockMultipartFile file = new MockMultipartFile("file", "sick-note.pdf", "application/pdf", "content".getBytes());
 
         mockMvc.perform(multipart("/api/employees/1/documents")
                         .file(file)
-                        .param("documentType", "CV")
+                        .param("documentType", "MEDICAL_CERTIFICATE")
+                        .with(req -> { req.setMethod("POST"); return req; }))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    @WithMockUser(username = "emptest1", roles = "EMPLOYEE")
+    void upload_deniedByService_returnsForbidden() throws Exception {
+        when(documentService.upload(anyLong(), any(), any(DocumentType.class), any(), anyString()))
+                .thenThrow(new AccessDeniedException("You are not permitted to upload this document type"));
+
+        MockMultipartFile file = new MockMultipartFile("file", "contract.pdf", "application/pdf", "content".getBytes());
+
+        mockMvc.perform(multipart("/api/employees/1/documents")
+                        .file(file)
+                        .param("documentType", "CONTRACT")
                         .with(req -> { req.setMethod("POST"); return req; }))
                 .andExpect(status().isForbidden());
     }
