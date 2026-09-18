@@ -11,7 +11,16 @@ import EmptyState from '../components/EmptyState';
 import ErrorInline from '../components/ErrorInline';
 import ConfirmDialog from '../components/ConfirmDialog';
 
-const DOCUMENT_TYPES = ['CONTRACT', 'ID_COPY', 'QUALIFICATION', 'DISCIPLINARY', 'CV', 'COVER_LETTER', 'OTHER'];
+const ALL_DOCUMENT_TYPES = [
+  'CONTRACT', 'ID_COPY', 'QUALIFICATION', 'DISCIPLINARY', 'CV', 'COVER_LETTER',
+  'MEDICAL_CERTIFICATE', 'TAX_DOCUMENT', 'OTHER',
+];
+
+// Types a non-HR/Admin user may upload for their own record.
+// Employer-issued/sensitive types stay HR/Admin only.
+const SELF_UPLOADABLE_TYPES = [
+  'ID_COPY', 'QUALIFICATION', 'CV', 'COVER_LETTER', 'MEDICAL_CERTIFICATE', 'TAX_DOCUMENT',
+];
 
 function formatDate(dateStr) {
   if (!dateStr) return '';
@@ -30,13 +39,14 @@ export default function Documents() {
   const { user } = useAuth();
   const isHrOrAdmin = user?.role === 'HR' || user?.role === 'ADMIN';
   const employeeId = user?.employeeId;
+  const uploadableTypes = isHrOrAdmin ? ALL_DOCUMENT_TYPES : SELF_UPLOADABLE_TYPES;
 
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const [file, setFile] = useState(null);
-  const [documentType, setDocumentType] = useState(DOCUMENT_TYPES[0]);
+  const [documentType, setDocumentType] = useState(uploadableTypes[0]);
   const [description, setDescription] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
@@ -115,44 +125,42 @@ export default function Documents() {
     <div>
       <p className="text-[20px] font-medium mb-5">My Documents</p>
 
-      {isHrOrAdmin ? (
-        <Card className="mb-3.5">
-          <p className="text-[15px] font-medium mb-3">Upload a document</p>
-          <form onSubmit={handleUpload} className="flex flex-col gap-3">
-            <div className="flex gap-3">
-              <Select
-                label="Type"
-                value={documentType}
-                onChange={(e) => setDocumentType(e.target.value)}
-              >
-                {DOCUMENT_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {formatTypeLabel(t)}
-                  </option>
-                ))}
-              </Select>
-              <Input
-                label="Description (optional)"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="flex-1"
-              />
-            </div>
-            <input
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png,.docx"
-              onChange={(e) => setFile(e.target.files[0] || null)}
-              className="text-[13px]"
+      <Card className="mb-3.5">
+        <p className="text-[15px] font-medium mb-3">Upload a document</p>
+        <form onSubmit={handleUpload} className="flex flex-col gap-3">
+          <div className="flex gap-3">
+            <Select
+              label="Type"
+              value={documentType}
+              onChange={(e) => setDocumentType(e.target.value)}
+            >
+              {uploadableTypes.map((t) => (
+                <option key={t} value={t}>
+                  {formatTypeLabel(t)}
+                </option>
+              ))}
+            </Select>
+            <Input
+              label="Description (optional)"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="flex-1"
             />
-            {uploadError ? <ErrorInline message={uploadError} /> : null}
-            <div>
-              <Button type="submit" disabled={uploading}>
-                {uploading ? 'Uploading…' : 'Upload'}
-              </Button>
-            </div>
-          </form>
-        </Card>
-      ) : null}
+          </div>
+          <input
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,.docx"
+            onChange={(e) => setFile(e.target.files[0] || null)}
+            className="text-[13px]"
+          />
+          {uploadError ? <ErrorInline message={uploadError} /> : null}
+          <div>
+            <Button type="submit" disabled={uploading}>
+              {uploading ? 'Uploading…' : 'Upload'}
+            </Button>
+          </div>
+        </form>
+      </Card>
 
       {loading ? (
         <div className="flex flex-col gap-2">
