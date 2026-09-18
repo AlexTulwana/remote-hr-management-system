@@ -5,7 +5,7 @@ import ErrorInline from '../components/ErrorInline';
 
 const ROLE_HOME = {
   EMPLOYEE: '/employee/dashboard',
-  MANAGER: '/profile',
+  MANAGER: '/manager/dashboard',
   HR: '/profile',
   ADMIN: '/profile',
 };
