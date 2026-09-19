@@ -51,7 +51,15 @@ public class EmployeeDirectoryService {
     public OrgChartNode getOrgChartFrom(Long employeeId) {
         Employee root = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
-        return buildNode(root, null);
+        if (currentUserService.isHrOrAdmin()) {
+            return buildNode(root, null);
+        }
+        Long callerBranchId = currentUserService.getCurrentBranchId();
+        Long rootBranchId = root.getBranch() != null ? root.getBranch().getId() : null;
+        if (callerBranchId == null || !callerBranchId.equals(rootBranchId)) {
+            throw new AccessDeniedException("You can only view the org chart for employees in your own branch");
+        }
+        return buildNode(root, callerBranchId);
     }
 
     private OrgChartNode buildNode(Employee employee, Long onlyBranchId) {
