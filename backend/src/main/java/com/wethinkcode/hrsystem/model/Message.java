@@ -26,4 +26,5 @@ public class Message {
 
     private LocalDateTime sentAt;
     private boolean isRead = false;
+    private LocalDateTime readAt;
 }
