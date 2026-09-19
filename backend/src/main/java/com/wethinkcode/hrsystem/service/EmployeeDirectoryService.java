@@ -6,6 +6,7 @@ import com.wethinkcode.hrsystem.model.Employee;
 import com.wethinkcode.hrsystem.repository.EmployeeRepository;
 import com.wethinkcode.hrsystem.repository.EmployeeSpecifications;
 import com.wethinkcode.hrsystem.security.CurrentUserService;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -38,6 +39,9 @@ public class EmployeeDirectoryService {
     }
 
     public List<OrgChartNode> getOrgChart() {
+        if (!currentUserService.isHrOrAdmin()) {
+            throw new AccessDeniedException("Only HR and Admin can view the full org chart");
+        }
         List<Employee> roots = employeeRepository.findByReportsToIsNull();
         return roots.stream()
                 .map(this::buildNode)
