@@ -2,11 +2,15 @@ package com.wethinkcode.hrsystem.controller;
 
 import com.wethinkcode.hrsystem.dto.CurrentUserResponse;
 import com.wethinkcode.hrsystem.dto.MessageRecipientOption;
+import com.wethinkcode.hrsystem.dto.UpdateContactRequest;
 import com.wethinkcode.hrsystem.model.User;
 import com.wethinkcode.hrsystem.repository.UserRepository;
 import com.wethinkcode.hrsystem.security.CurrentUserService;
+import com.wethinkcode.hrsystem.service.EmployeeService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,14 +23,27 @@ public class UserController {
 
     private final CurrentUserService currentUserService;
     private final UserRepository userRepository;
+    private final EmployeeService employeeService;
 
-    public UserController(CurrentUserService currentUserService, UserRepository userRepository) {
+    public UserController(CurrentUserService currentUserService, UserRepository userRepository,
+                          EmployeeService employeeService) {
         this.currentUserService = currentUserService;
         this.userRepository = userRepository;
+        this.employeeService = employeeService;
     }
 
     @GetMapping("/me")
     public ResponseEntity<CurrentUserResponse> me() {
+        return ResponseEntity.ok(CurrentUserResponse.from(currentUserService.getCurrentUser()));
+    }
+
+    @PutMapping("/me/contact")
+    public ResponseEntity<CurrentUserResponse> updateMyContact(@RequestBody UpdateContactRequest request) {
+        User current = currentUserService.getCurrentUser();
+        if (current.getEmployee() == null) {
+            throw new RuntimeException("No employee record is linked to this account");
+        }
+        employeeService.updateOwnContact(current.getEmployee().getId(), request);
         return ResponseEntity.ok(CurrentUserResponse.from(currentUserService.getCurrentUser()));
     }
 
