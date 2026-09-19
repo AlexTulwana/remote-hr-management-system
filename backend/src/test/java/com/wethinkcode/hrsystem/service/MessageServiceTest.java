@@ -52,6 +52,7 @@ class MessageServiceTest {
         request = new MessageRequest();
         request.setRecipientId(2L);
         request.setContent("Are you free for a quick sync today?");
+        lenient().when(currentUserService.isHrOrAdmin()).thenReturn(true);
     }
 
     // ---- send() ----
