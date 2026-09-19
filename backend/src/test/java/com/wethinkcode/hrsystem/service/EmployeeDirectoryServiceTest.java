@@ -12,13 +12,23 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.ArgumentCaptor;
+import org.springframework.data.jpa.domain.Specification;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -127,5 +137,57 @@ class EmployeeDirectoryServiceTest {
 
         assertEquals("Team Lead", result.getFullName());
         assertTrue(result.getDirectReports().isEmpty());
+    }
+
+    // ---------- getDirectory() branch scoping ----------
+
+    private void loginAsManagerInBranch(Long branchId) {
+        when(currentUserService.isHrOrAdmin()).thenReturn(false);
+        when(currentUserService.getCurrentBranchId()).thenReturn(branchId);
+    }
+
+    @SuppressWarnings("unchecked")
+    private CriteriaBuilder applyQueriedSpecification() {
+        ArgumentCaptor<Specification<Employee>> captor = ArgumentCaptor.forClass(Specification.class);
+        verify(employeeRepository).findAll(captor.capture());
+        CriteriaBuilder cb = mock(CriteriaBuilder.class, RETURNS_DEEP_STUBS);
+        Root<Employee> root = mock(Root.class, RETURNS_DEEP_STUBS);
+        captor.getValue().toPredicate(root, mock(CriteriaQuery.class), cb);
+        return cb;
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void getDirectory_managerWithNoBranch_returnsEmptyListWithoutQuerying() {
+        loginAsManagerInBranch(null);
+
+        List<EmployeeDirectoryEntry> result = employeeDirectoryService.getDirectory(null, null, null);
+
+        assertTrue(result.isEmpty());
+        verify(employeeRepository, never()).findAll(any(Specification.class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void getDirectory_manager_ignoresRequestedBranchAndUsesOwn() {
+        loginAsManagerInBranch(1L);
+        when(employeeRepository.findAll(any(Specification.class))).thenReturn(List.of());
+
+        employeeDirectoryService.getDirectory(2L, null, null);
+
+        CriteriaBuilder cb = applyQueriedSpecification();
+        verify(cb).equal(any(), eq(1L));
+        verify(cb, never()).equal(any(), eq(2L));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void getDirectory_hr_usesRequestedBranch() {
+        when(employeeRepository.findAll(any(Specification.class))).thenReturn(List.of());
+
+        employeeDirectoryService.getDirectory(2L, null, null);
+
+        CriteriaBuilder cb = applyQueriedSpecification();
+        verify(cb).equal(any(), eq(2L));
     }
 }
