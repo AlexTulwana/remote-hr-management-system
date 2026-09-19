@@ -31,6 +31,10 @@ public class MessageService {
         User recipient = userRepository.findById(request.getRecipientId())
                 .orElseThrow(() -> new RuntimeException("Recipient not found"));
 
+        if (!currentUserService.isHrOrAdmin() && !isAllowedRecipient(recipient)) {
+            throw new AccessDeniedException("You can only message HR, Admin and people in your own branch");
+        }
+
         Message message = new Message();
         message.setSender(sender);
         message.setRecipient(recipient);
@@ -39,6 +43,16 @@ public class MessageService {
         message.setRead(false);
 
         return messageRepository.save(message);
+    }
+
+    private boolean isAllowedRecipient(User recipient) {
+        if ("HR".equals(recipient.getRole()) || "ADMIN".equals(recipient.getRole())) {
+            return true;
+        }
+        Long callerBranchId = currentUserService.getCurrentBranchId();
+        Long recipientBranchId = recipient.getEmployee() != null && recipient.getEmployee().getBranch() != null
+                ? recipient.getEmployee().getBranch().getId() : null;
+        return callerBranchId != null && callerBranchId.equals(recipientBranchId);
     }
 
     public List<Message> getInbox(Long userId) {
