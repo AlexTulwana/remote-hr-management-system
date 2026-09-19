@@ -7,6 +7,7 @@ import com.wethinkcode.hrsystem.repository.UserRepository;
 import com.wethinkcode.hrsystem.security.CurrentUserService;
 import com.wethinkcode.hrsystem.security.JwtUtil;
 import com.wethinkcode.hrsystem.service.EmployeeService;
+import com.wethinkcode.hrsystem.service.MessageService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -47,6 +48,9 @@ class UserControllerTest {
 
     @MockitoBean
     private EmployeeService employeeService;
+
+    @MockitoBean
+    private MessageService messageService;
 
     private User buildUser(Long id, String username, Long employeeId, String fullName, String position, String branchName) {
         Branch branch = null;
