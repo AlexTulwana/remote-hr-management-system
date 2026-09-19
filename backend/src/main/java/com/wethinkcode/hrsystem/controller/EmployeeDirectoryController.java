@@ -33,6 +33,7 @@ public class EmployeeDirectoryController {
     }
 
     @GetMapping("/org-chart")
+    @PreAuthorize("hasAnyRole('HR','ADMIN')")
     public ResponseEntity<List<OrgChartNode>> getOrgChart() {
         return ResponseEntity.ok(employeeDirectoryService.getOrgChart());
     }
