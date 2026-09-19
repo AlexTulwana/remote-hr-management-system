@@ -12,7 +12,8 @@ public record MessageResponse(
         String recipientName,
         String content,
         LocalDateTime sentAt,
-        boolean read
+        boolean read,
+        LocalDateTime readAt
 ) {
     private static String nameOf(com.wethinkcode.hrsystem.model.User user) {
         if (user.getEmployee() != null) return user.getEmployee().getFullName();
@@ -28,7 +29,8 @@ public record MessageResponse(
                 nameOf(message.getRecipient()),
                 message.getContent(),
                 message.getSentAt(),
-                message.isRead()
+                message.isRead(),
+                message.getReadAt()
         );
     }
 }
