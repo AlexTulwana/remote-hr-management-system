@@ -309,4 +309,80 @@ class MessageServiceTest {
 
         assertNotNull(messageService.send(request));
     }
+
+    // ---- lookupRecipients() ----
+
+    private User candidate(Long id, Long branchId, String role) {
+        User user = new User();
+        user.setId(id);
+        user.setRole(role);
+        Employee employee = new Employee();
+        employee.setId(100L + id);
+        if (branchId != null) {
+            Branch branch = new Branch();
+            branch.setId(branchId);
+            employee.setBranch(branch);
+        }
+        user.setEmployee(employee);
+        return user;
+    }
+
+    @Test
+    void lookupRecipients_nonHr_returnsOnlyOwnBranchAndHrAdmin() {
+        when(currentUserService.isHrOrAdmin()).thenReturn(false);
+        when(currentUserService.getCurrentBranchId()).thenReturn(1L);
+        when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+        when(userRepository.searchRecipients("emma", null, 1L)).thenReturn(List.of(
+                candidate(3L, 1L, "EMPLOYEE"),
+                candidate(4L, 2L, "EMPLOYEE"),
+                candidate(5L, 2L, "HR"),
+                candidate(6L, 2L, "ADMIN"),
+                candidate(7L, null, "EMPLOYEE")));
+
+        List<User> result = messageService.lookupRecipients("emma", null);
+
+        assertEquals(List.of(3L, 5L, 6L), result.stream().map(User::getId).toList());
+    }
+
+    @Test
+    void lookupRecipients_nonHr_ignoresRequestedBranch() {
+        when(currentUserService.isHrOrAdmin()).thenReturn(false);
+        when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+        when(userRepository.searchRecipients("emma", null, 1L)).thenReturn(List.of());
+
+        messageService.lookupRecipients("emma", 2L);
+
+        verify(userRepository).searchRecipients("emma", null, 1L);
+    }
+
+    @Test
+    void lookupRecipients_nonHr_blankQuery_returnsEmptyWithoutQuerying() {
+        when(currentUserService.isHrOrAdmin()).thenReturn(false);
+
+        List<User> result = messageService.lookupRecipients("", 2L);
+
+        assertTrue(result.isEmpty());
+        verify(userRepository, never()).searchRecipients(any(), any(), any());
+    }
+
+    @Test
+    void lookupRecipients_hr_browsesBranchWithNoQuery() {
+        when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+        when(userRepository.searchRecipients(null, 2L, 1L)).thenReturn(List.of(
+                candidate(3L, 2L, "EMPLOYEE"),
+                candidate(4L, 2L, "MANAGER")));
+
+        List<User> result = messageService.lookupRecipients("", 2L);
+
+        assertEquals(2, result.size());
+        verify(userRepository).searchRecipients(null, 2L, 1L);
+    }
+
+    @Test
+    void lookupRecipients_hr_shortQueryAndNoBranch_returnsEmptyWithoutQuerying() {
+        List<User> result = messageService.lookupRecipients("a", null);
+
+        assertTrue(result.isEmpty());
+        verify(userRepository, never()).searchRecipients(any(), any(), any());
+    }
 }
