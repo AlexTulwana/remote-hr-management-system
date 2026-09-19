@@ -1,6 +1,7 @@
 package com.wethinkcode.hrsystem.service;
 
 import com.wethinkcode.hrsystem.dto.EmployeeRequest;
+import com.wethinkcode.hrsystem.dto.UpdateContactRequest;
 import com.wethinkcode.hrsystem.model.Branch;
 import com.wethinkcode.hrsystem.model.Employee;
 import com.wethinkcode.hrsystem.model.User;
@@ -225,5 +226,75 @@ class EmployeeServiceTest {
 
         assertThat(existingEmployee.isActive()).isFalse();
         verify(employeeRepository).save(existingEmployee);
+    }
+
+    // ---- updateOwnContact() ----
+
+    private UpdateContactRequest contactRequest(String contactDetails, String email) {
+        UpdateContactRequest request = new UpdateContactRequest();
+        request.setContactDetails(contactDetails);
+        request.setEmail(email);
+        return request;
+    }
+
+    @Test
+    void updateOwnContact_valid_trimsAndSaves() {
+        when(employeeRepository.findById(4L)).thenReturn(Optional.of(existingEmployee));
+
+        employeeService.updateOwnContact(4L, contactRequest("  082 555 0000  ", "  new@example.com  "));
+
+        assertThat(existingEmployee.getContactDetails()).isEqualTo("082 555 0000");
+        assertThat(existingEmployee.getEmail()).isEqualTo("new@example.com");
+        verify(employeeRepository).save(existingEmployee);
+    }
+
+    @Test
+    void updateOwnContact_blankContactDetails_throwsAndDoesNotSave() {
+        assertThatThrownBy(() -> employeeService.updateOwnContact(4L, contactRequest("   ", "new@example.com")))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Contact details are required");
+        verify(employeeRepository, never()).save(any());
+    }
+
+    @Test
+    void updateOwnContact_nullContactDetails_throwsAndDoesNotSave() {
+        assertThatThrownBy(() -> employeeService.updateOwnContact(4L, contactRequest(null, "new@example.com")))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Contact details are required");
+        verify(employeeRepository, never()).save(any());
+    }
+
+    @Test
+    void updateOwnContact_blankEmail_throwsAndDoesNotSave() {
+        assertThatThrownBy(() -> employeeService.updateOwnContact(4L, contactRequest("082 555 0000", "   ")))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Email is required");
+        verify(employeeRepository, never()).save(any());
+    }
+
+    @Test
+    void updateOwnContact_nullEmail_throwsAndDoesNotSave() {
+        assertThatThrownBy(() -> employeeService.updateOwnContact(4L, contactRequest("082 555 0000", null)))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Email is required");
+        verify(employeeRepository, never()).save(any());
+    }
+
+    @Test
+    void updateOwnContact_invalidEmail_throwsAndDoesNotSave() {
+        assertThatThrownBy(() -> employeeService.updateOwnContact(4L, contactRequest("082 555 0000", "not-an-email")))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Email address is not valid");
+        verify(employeeRepository, never()).save(any());
+    }
+
+    @Test
+    void updateOwnContact_unknownEmployee_throwsException() {
+        when(employeeRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> employeeService.updateOwnContact(99L, contactRequest("082 555 0000", "new@example.com")))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Employee not found");
+        verify(employeeRepository, never()).save(any());
     }
 }
