@@ -55,6 +55,21 @@ public class MessageService {
         return callerBranchId != null && callerBranchId.equals(recipientBranchId);
     }
 
+    public List<User> lookupRecipients(String query, Long branchId) {
+        boolean isHrOrAdmin = currentUserService.isHrOrAdmin();
+        Long effectiveBranchId = isHrOrAdmin ? branchId : null;
+        String trimmed = query == null ? "" : query.trim();
+        String effectiveQuery = trimmed.length() < 2 ? null : trimmed;
+        if (effectiveQuery == null && effectiveBranchId == null) {
+            return List.of();
+        }
+        Long currentUserId = currentUserService.getCurrentUser().getId();
+        return userRepository.searchRecipients(effectiveQuery, effectiveBranchId, currentUserId)
+                .stream()
+                .filter(u -> isHrOrAdmin || isAllowedRecipient(u))
+                .toList();
+    }
+
     public List<Message> getInbox(Long userId) {
         if (!currentUserService.getCurrentUser().getId().equals(userId)) {
             throw new AccessDeniedException("You are not authorized to view this inbox");
