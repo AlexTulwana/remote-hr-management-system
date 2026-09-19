@@ -180,4 +180,44 @@ class MessageServiceTest {
 
         verify(messageRepository, never()).save(any());
     }
+
+    // ---- markAsRead() read timestamp ----
+
+    @Test
+    void markAsRead_firstRead_recordsReadTime() {
+        Message message = new Message();
+        message.setId(10L);
+        message.setRecipient(currentUser);
+        message.setRead(false);
+        when(messageRepository.findById(10L)).thenReturn(Optional.of(message));
+        when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+        when(messageRepository.save(any(Message.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        LocalDateTime before = LocalDateTime.now();
+        Message result = messageService.markAsRead(10L);
+        LocalDateTime after = LocalDateTime.now();
+
+        assertNotNull(result.getReadAt());
+        assertFalse(result.getReadAt().isBefore(before));
+        assertFalse(result.getReadAt().isAfter(after));
+    }
+
+    @Test
+    void markAsRead_alreadyRead_keepsOriginalReadTime() {
+        LocalDateTime original = LocalDateTime.of(2026, 1, 15, 9, 30);
+        Message message = new Message();
+        message.setId(10L);
+        message.setRecipient(currentUser);
+        message.setRead(true);
+        message.setReadAt(original);
+        when(messageRepository.findById(10L)).thenReturn(Optional.of(message));
+        when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+        when(messageRepository.save(any(Message.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Message result = messageService.markAsRead(10L);
+
+        assertEquals(original, result.getReadAt());
+    }
 }
