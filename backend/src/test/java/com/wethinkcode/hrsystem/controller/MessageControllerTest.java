@@ -196,4 +196,19 @@ class MessageControllerTest {
         mockMvc.perform(patch("/api/messages/10/read"))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void markAsRead_returnsReadTimestamp() throws Exception {
+        User sender = buildUser(2L, "sender1", "Sam Sender");
+        User recipient = buildUser(1L, "recipient1", "Rae Recipient");
+        Message message = buildMessage(10L, sender, recipient, "Read this", true);
+        message.setReadAt(LocalDateTime.of(2026, 9, 20, 14, 32));
+
+        when(messageService.markAsRead(10L)).thenReturn(message);
+
+        mockMvc.perform(patch("/api/messages/10/read"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.readAt").exists());
+    }
 }
