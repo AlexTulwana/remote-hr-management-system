@@ -27,6 +27,31 @@
   --font-sans: 'Public Sans', sans-serif;
 }
 
+:root[data-theme="dark"] {
+  --color-surface-0: #17161a;
+  --color-surface-1: #212026;
+  --color-surface-2: #26252b;
+
+  --color-text-primary: #f2f1ee;
+  --color-text-secondary: #a8a6a0;
+  --color-text-muted: #78766f;
+
+  --color-border: #35343a;
+  --color-border-strong: #45444a;
+
+  --color-success-bg: #1e2b16;
+  --color-success-text: #8fc65a;
+
+  --color-danger-bg: #331c1c;
+  --color-danger-text: #e08585;
+
+  --color-info-bg: #1c2733;
+  --color-info-text: #7fb0dd;
+
+  --color-warning-bg: #322a16;
+  --color-warning-text: #e0b95f;
+}
+
 body {
   margin: 0;
   background: var(--color-surface-0);
