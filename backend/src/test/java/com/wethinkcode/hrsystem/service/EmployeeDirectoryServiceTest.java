@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.ArgumentCaptor;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.AccessDeniedException;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
@@ -189,5 +190,16 @@ class EmployeeDirectoryServiceTest {
 
         CriteriaBuilder cb = applyQueriedSpecification();
         verify(cb).equal(any(), eq(2L));
+    }
+
+    // ---------- getOrgChart() restriction ----------
+
+    @Test
+    void getOrgChart_nonHrUser_isDeniedWithoutQuerying() {
+        when(currentUserService.isHrOrAdmin()).thenReturn(false);
+
+        assertThrows(AccessDeniedException.class, () -> employeeDirectoryService.getOrgChart());
+
+        verify(employeeRepository, never()).findByReportsToIsNull();
     }
 }
