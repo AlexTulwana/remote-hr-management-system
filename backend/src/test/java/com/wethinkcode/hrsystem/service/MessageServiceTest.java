@@ -1,6 +1,8 @@
 package com.wethinkcode.hrsystem.service;
 
 import com.wethinkcode.hrsystem.dto.MessageRequest;
+import com.wethinkcode.hrsystem.model.Branch;
+import com.wethinkcode.hrsystem.model.Employee;
 import com.wethinkcode.hrsystem.model.Message;
 import com.wethinkcode.hrsystem.model.User;
 import com.wethinkcode.hrsystem.repository.MessageRepository;
@@ -220,5 +222,91 @@ class MessageServiceTest {
         Message result = messageService.markAsRead(10L);
 
         assertEquals(original, result.getReadAt());
+    }
+
+    // ---- send() recipient scope ----
+
+    private User recipientInBranch(Long branchId, String role) {
+        Branch branch = new Branch();
+        branch.setId(branchId);
+        Employee employee = new Employee();
+        employee.setId(20L);
+        employee.setBranch(branch);
+        User user = new User();
+        user.setId(2L);
+        user.setRole(role);
+        user.setEmployee(employee);
+        return user;
+    }
+
+    @Test
+    void send_nonHrToSameBranch_isAllowed() {
+        when(currentUserService.isHrOrAdmin()).thenReturn(false);
+        when(currentUserService.getCurrentBranchId()).thenReturn(1L);
+        when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(recipientInBranch(1L, "EMPLOYEE")));
+        when(messageRepository.save(any(Message.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Message result = messageService.send(request);
+
+        assertNotNull(result);
+        verify(messageRepository).save(any(Message.class));
+    }
+
+    @Test
+    void send_nonHrToOtherBranch_isDenied() {
+        when(currentUserService.isHrOrAdmin()).thenReturn(false);
+        when(currentUserService.getCurrentBranchId()).thenReturn(1L);
+        when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(recipientInBranch(2L, "EMPLOYEE")));
+
+        assertThrows(AccessDeniedException.class, () -> messageService.send(request));
+
+        verify(messageRepository, never()).save(any());
+    }
+
+    @Test
+    void send_nonHrToHrRecipientInOtherBranch_isAllowed() {
+        when(currentUserService.isHrOrAdmin()).thenReturn(false);
+        when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(recipientInBranch(2L, "HR")));
+        when(messageRepository.save(any(Message.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertNotNull(messageService.send(request));
+    }
+
+    @Test
+    void send_nonHrToAdminRecipientInOtherBranch_isAllowed() {
+        when(currentUserService.isHrOrAdmin()).thenReturn(false);
+        when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(recipientInBranch(2L, "ADMIN")));
+        when(messageRepository.save(any(Message.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertNotNull(messageService.send(request));
+    }
+
+    @Test
+    void send_senderWithNoBranchToNonHr_isDenied() {
+        when(currentUserService.isHrOrAdmin()).thenReturn(false);
+        when(currentUserService.getCurrentBranchId()).thenReturn(null);
+        when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(recipientInBranch(1L, "EMPLOYEE")));
+
+        assertThrows(AccessDeniedException.class, () -> messageService.send(request));
+
+        verify(messageRepository, never()).save(any());
+    }
+
+    @Test
+    void send_hrToAnyBranch_isAllowed() {
+        when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(recipientInBranch(2L, "EMPLOYEE")));
+        when(messageRepository.save(any(Message.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertNotNull(messageService.send(request));
     }
 }
