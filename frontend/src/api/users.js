@@ -7,3 +7,10 @@ export function getMe() {
 export function lookupUsers(query) {
   return apiFetch(`/api/users/lookup?query=${encodeURIComponent(query)}`);
 }
+
+export function updateMyContact({ contactDetails, email }) {
+  return apiFetch('/api/users/me/contact', {
+    method: 'PUT',
+    body: JSON.stringify({ contactDetails, email }),
+  });
+}
