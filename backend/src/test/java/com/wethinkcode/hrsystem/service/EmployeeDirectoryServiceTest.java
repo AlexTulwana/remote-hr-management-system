@@ -202,4 +202,71 @@ class EmployeeDirectoryServiceTest {
 
         verify(employeeRepository, never()).findByReportsToIsNull();
     }
+
+    // ---------- getOrgChartFrom() branch scoping ----------
+
+    private Branch otherBranch() {
+        Branch other = new Branch();
+        other.setId(2L);
+        other.setName("Durban");
+        return other;
+    }
+
+    @Test
+    void getOrgChartFrom_managerSameBranch_trimsOtherBranchReports() {
+        when(currentUserService.isHrOrAdmin()).thenReturn(false);
+        when(currentUserService.getCurrentBranchId()).thenReturn(1L);
+
+        Employee lead = new Employee();
+        lead.setId(5L);
+        lead.setFullName("Sam Manager");
+        lead.setBranch(branch);
+
+        Employee local = new Employee();
+        local.setId(6L);
+        local.setFullName("Emma Employee");
+        local.setBranch(branch);
+
+        Employee remote = new Employee();
+        remote.setId(7L);
+        remote.setFullName("Lee Durban");
+        remote.setBranch(otherBranch());
+
+        when(employeeRepository.findById(5L)).thenReturn(Optional.of(lead));
+        when(employeeRepository.findByReportsToId(5L)).thenReturn(List.of(local, remote));
+        when(employeeRepository.findByReportsToId(6L)).thenReturn(List.of());
+
+        OrgChartNode result = employeeDirectoryService.getOrgChartFrom(5L);
+
+        assertEquals(1, result.getDirectReports().size());
+        assertEquals("Emma Employee", result.getDirectReports().get(0).getFullName());
+        verify(employeeRepository, never()).findByReportsToId(7L);
+    }
+
+    @Test
+    void getOrgChartFrom_managerOtherBranch_isDenied() {
+        when(currentUserService.isHrOrAdmin()).thenReturn(false);
+        when(currentUserService.getCurrentBranchId()).thenReturn(1L);
+
+        Employee outsider = new Employee();
+        outsider.setId(8L);
+        outsider.setBranch(otherBranch());
+        when(employeeRepository.findById(8L)).thenReturn(Optional.of(outsider));
+
+        assertThrows(AccessDeniedException.class, () -> employeeDirectoryService.getOrgChartFrom(8L));
+        verify(employeeRepository, never()).findByReportsToId(any());
+    }
+
+    @Test
+    void getOrgChartFrom_managerWithNoBranch_isDenied() {
+        when(currentUserService.isHrOrAdmin()).thenReturn(false);
+        when(currentUserService.getCurrentBranchId()).thenReturn(null);
+
+        Employee target = new Employee();
+        target.setId(9L);
+        target.setBranch(branch);
+        when(employeeRepository.findById(9L)).thenReturn(Optional.of(target));
+
+        assertThrows(AccessDeniedException.class, () -> employeeDirectoryService.getOrgChartFrom(9L));
+    }
 }
