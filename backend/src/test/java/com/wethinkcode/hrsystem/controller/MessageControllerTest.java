@@ -211,4 +211,16 @@ class MessageControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.readAt").exists());
     }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void send_recipientOutsideScope_deniedByService() throws Exception {
+        when(messageService.send(any(MessageRequest.class)))
+                .thenThrow(new AccessDeniedException("You can only message HR, Admin and people in your own branch"));
+
+        mockMvc.perform(post("/api/messages")
+                        .contentType("application/json")
+                        .content(SEND_BODY))
+                .andExpect(status().isForbidden());
+    }
 }
