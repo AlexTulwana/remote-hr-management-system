@@ -1,6 +1,7 @@
 package com.wethinkcode.hrsystem.service;
 
 import com.wethinkcode.hrsystem.dto.EmployeeRequest;
+import com.wethinkcode.hrsystem.dto.UpdateContactRequest;
 import com.wethinkcode.hrsystem.model.Branch;
 import com.wethinkcode.hrsystem.model.Employee;
 import com.wethinkcode.hrsystem.repository.BranchRepository;
@@ -43,6 +44,23 @@ public class EmployeeService {
     public Employee update(Long id, EmployeeRequest request) {
         Employee employee = getById(id);
         mapRequestToEmployee(employee, request);
+        return employeeRepository.save(employee);
+    }
+
+    public Employee updateOwnContact(Long employeeId, UpdateContactRequest request) {
+        if (request.getContactDetails() == null || request.getContactDetails().isBlank()) {
+            throw new RuntimeException("Contact details are required");
+        }
+        if (request.getEmail() == null || request.getEmail().isBlank()) {
+            throw new RuntimeException("Email is required");
+        }
+        String email = request.getEmail().trim();
+        if (!email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            throw new RuntimeException("Email address is not valid");
+        }
+        Employee employee = getById(employeeId);
+        employee.setContactDetails(request.getContactDetails().trim());
+        employee.setEmail(email);
         return employeeRepository.save(employee);
     }
     public void linkUserToEmployee(Long employeeId, Long userId) {
