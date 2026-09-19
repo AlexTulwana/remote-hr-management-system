@@ -7,6 +7,7 @@ import com.wethinkcode.hrsystem.model.User;
 import com.wethinkcode.hrsystem.repository.UserRepository;
 import com.wethinkcode.hrsystem.security.CurrentUserService;
 import com.wethinkcode.hrsystem.service.EmployeeService;
+import com.wethinkcode.hrsystem.service.MessageService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -24,12 +25,14 @@ public class UserController {
     private final CurrentUserService currentUserService;
     private final UserRepository userRepository;
     private final EmployeeService employeeService;
+    private final MessageService messageService;
 
     public UserController(CurrentUserService currentUserService, UserRepository userRepository,
-                          EmployeeService employeeService) {
+                          EmployeeService employeeService, MessageService messageService) {
         this.currentUserService = currentUserService;
         this.userRepository = userRepository;
         this.employeeService = employeeService;
+        this.messageService = messageService;
     }
 
     @GetMapping("/me")
@@ -48,12 +51,11 @@ public class UserController {
     }
 
     @GetMapping("/lookup")
-    public ResponseEntity<List<MessageRecipientOption>> lookup(@RequestParam String query) {
-        User current = currentUserService.getCurrentUser();
-        List<MessageRecipientOption> results = userRepository
-                .findByEmployeeFullNameContainingIgnoreCase(query)
+    public ResponseEntity<List<MessageRecipientOption>> lookup(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) Long branchId) {
+        List<MessageRecipientOption> results = messageService.lookupRecipients(query, branchId)
                 .stream()
-                .filter(u -> u.getEmployee() != null && !u.getId().equals(current.getId()))
                 .map(MessageRecipientOption::from)
                 .toList();
         return ResponseEntity.ok(results);

@@ -118,13 +118,10 @@ class UserControllerTest {
 
     @Test
     @WithMockUser(roles = "EMPLOYEE")
-    void lookup_returnsMatchingUsers_excludingSelf() throws Exception {
-        User self = buildUser(1L, "emptest1", 5L, "Emma Employee", "Software Engineer", "Cape Town");
+    void lookup_returnsUsersFromMessageService() throws Exception {
         User other = buildUser(2L, "emmaadmin", 6L, "Emma Admin", "HR Officer", "Durban");
 
-        when(currentUserService.getCurrentUser()).thenReturn(self);
-        when(userRepository.findByEmployeeFullNameContainingIgnoreCase("Emma"))
-                .thenReturn(List.of(self, other));
+        when(messageService.lookupRecipients("Emma", null)).thenReturn(List.of(other));
 
         mockMvc.perform(get("/api/users/lookup").param("query", "Emma"))
                 .andExpect(status().isOk())
@@ -199,5 +196,17 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.error").value("No employee record is linked to this account"));
 
         verify(employeeService, never()).updateOwnContact(any(), any());
+    }
+
+    @Test
+    @WithMockUser(roles = "HR")
+    void lookup_branchIdWithoutQuery_isPassedToService() throws Exception {
+        when(messageService.lookupRecipients(null, 2L)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/users/lookup").param("branchId", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+
+        verify(messageService).lookupRecipients(null, 2L);
     }
 }
