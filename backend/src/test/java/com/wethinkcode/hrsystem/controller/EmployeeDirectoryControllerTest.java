@@ -16,6 +16,8 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -87,6 +89,24 @@ class EmployeeDirectoryControllerTest {
         when(employeeDirectoryService.getOrgChartFrom(anyLong())).thenReturn(mock(OrgChartNode.class));
 
         mockMvc.perform(get("/api/employee-directory/org-chart/4"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "MANAGER")
+    void getOrgChart_managerRole_isForbidden() throws Exception {
+        mockMvc.perform(get("/api/employee-directory/org-chart"))
+                .andExpect(status().isForbidden());
+
+        verify(employeeDirectoryService, never()).getOrgChart();
+    }
+
+    @Test
+    @WithMockUser(roles = "HR")
+    void getOrgChart_hrRole_isAllowed() throws Exception {
+        when(employeeDirectoryService.getOrgChart()).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/employee-directory/org-chart"))
                 .andExpect(status().isOk());
     }
 }
