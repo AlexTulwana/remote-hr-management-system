@@ -17,7 +17,7 @@ import ProtectedRoute from './auth/ProtectedRoute';
 import { useAuth } from './auth/AuthContext';
 
 function navItemsFor(role) {
-  const items = [];
+  const items = [{ to: '/profile', label: 'Profile' }];
   if (role === 'EMPLOYEE') {
     items.push({ to: '/employee/dashboard', label: 'Dashboard' });
     items.push({ to: '/employee/leave-requests', label: 'Leave Requests' });
@@ -30,7 +30,6 @@ function navItemsFor(role) {
     items.push({ to: '/manager/leave-approvals', label: 'Leave Approvals' });
   }
   items.push(
-    { to: '/profile', label: 'Profile' },
     { to: '/messages', label: 'Messages' },
     { to: '/announcements', label: 'Announcements' },
     { to: '/calendar', label: 'Calendar' },
