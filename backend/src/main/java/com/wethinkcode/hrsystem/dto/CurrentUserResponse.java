@@ -13,7 +13,9 @@ public record CurrentUserResponse(
         String position,
         String department,
         String branchName,
-        String employmentStatus
+        String employmentStatus,
+        String contactDetails,
+        String email
 ) {
     public static CurrentUserResponse from(User user) {
         Employee employee = user.getEmployee();
@@ -27,7 +29,9 @@ public record CurrentUserResponse(
                 employee != null ? employee.getPosition() : null,
                 employee != null ? employee.getDepartment() : null,
                 employee != null && employee.getBranch() != null ? employee.getBranch().getName() : null,
-                employee != null ? employee.getEmploymentStatus() : null
+                employee != null ? employee.getEmploymentStatus() : null,
+                employee != null ? employee.getContactDetails() : null,
+                employee != null ? employee.getEmail() : null
         );
     }
 }
