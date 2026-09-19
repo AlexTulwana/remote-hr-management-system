@@ -11,14 +11,21 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -122,5 +129,71 @@ class UserControllerTest {
                 .andExpect(jsonPath("$[0].fullName").value("Emma Admin"))
                 .andExpect(jsonPath("$[0].position").value("HR Officer"))
                 .andExpect(jsonPath("$[0].branchName").value("Durban"));
+    }
+
+    // ---- updateMyContact() ----
+
+    private static final String VALID_CONTACT_BODY =
+            "{\"contactDetails\":\"082 555 0000\",\"email\":\"new@example.com\"}";
+
+    @Test
+    void updateMyContact_unauthenticated_isRejected() throws Exception {
+        mockMvc.perform(put("/api/users/me/contact")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_CONTACT_BODY))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void updateMyContact_valid_updatesOwnEmployeeAndReturnsProfile() throws Exception {
+        User user = buildUser(1L, "emptest1", 5L, "Emma Employee", "Software Engineer", "Cape Town");
+        when(currentUserService.getCurrentUser()).thenReturn(user);
+
+        mockMvc.perform(put("/api/users/me/contact")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_CONTACT_BODY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("emptest1"))
+                .andExpect(jsonPath("$.employeeId").value(5));
+
+        verify(employeeService).updateOwnContact(eq(5L), any());
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void updateMyContact_serviceRejectsInput_returnsBadRequestWithMessage() throws Exception {
+        User user = buildUser(1L, "emptest1", 5L, "Emma Employee", "Software Engineer", "Cape Town");
+        when(currentUserService.getCurrentUser()).thenReturn(user);
+        when(employeeService.updateOwnContact(eq(5L), any()))
+                .thenThrow(new RuntimeException("Email address is not valid"));
+
+        mockMvc.perform(put("/api/users/me/contact")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_CONTACT_BODY))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Email address is not valid"));
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void updateMyContact_noLinkedEmployee_returnsBadRequestAndDoesNotCallService() throws Exception {
+        User user = new User();
+        user.setId(1L);
+        user.setUsername("ghost");
+        user.setRole("EMPLOYEE");
+        when(currentUserService.getCurrentUser()).thenReturn(user);
+
+        mockMvc.perform(put("/api/users/me/contact")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_CONTACT_BODY))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("No employee record is linked to this account"));
+
+        verify(employeeService, never()).updateOwnContact(any(), any());
     }
 }
