@@ -9,6 +9,7 @@ import EmployeeDashboard from './pages/employee/EmployeeDashboard';
 import LeaveRequests from './pages/employee/LeaveRequests';
 import Attendance from './pages/employee/Attendance';
 import MyRequests from './pages/employee/MyRequests';
+import Payslips from './pages/employee/Payslips';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
 import LeaveApprovals from './pages/manager/LeaveApprovals';
 import AppLayout from './components/AppLayout';
@@ -22,6 +23,7 @@ function navItemsFor(role) {
     items.push({ to: '/employee/leave-requests', label: 'Leave Requests' });
     items.push({ to: '/employee/attendance', label: 'Attendance' });
     items.push({ to: '/employee/my-requests', label: 'My Requests' });
+    items.push({ to: '/employee/payslips', label: 'Payslips' });
   }
   if (role === 'MANAGER') {
     items.push({ to: '/manager/dashboard', label: 'Dashboard' });
@@ -80,6 +82,16 @@ function App() {
           <ProtectedRoute allowedRoles={['EMPLOYEE']}>
             <AppLayout navItems={navItems}>
               <MyRequests />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/employee/payslips"
+        element={
+          <ProtectedRoute allowedRoles={['EMPLOYEE']}>
+            <AppLayout navItems={navItems}>
+              <Payslips />
             </AppLayout>
           </ProtectedRoute>
         }
