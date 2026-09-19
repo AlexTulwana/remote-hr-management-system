@@ -46,6 +46,16 @@ export default function Profile() {
           <Field label="Username" value={user.username} />
         </div>
       </Card>
+
+      <div className="mt-2.5">
+        <Card>
+          <p className="text-[13px] font-medium text-text-secondary mb-3.5">Contact details</p>
+          <div className="grid grid-cols-2 gap-y-4 gap-x-6">
+            <Field label="Email" value={user.email} />
+            <Field label="Contact details" value={user.contactDetails} />
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
