@@ -5,6 +5,7 @@ import com.wethinkcode.hrsystem.dto.OrgChartNode;
 import com.wethinkcode.hrsystem.model.Branch;
 import com.wethinkcode.hrsystem.model.Employee;
 import com.wethinkcode.hrsystem.repository.EmployeeRepository;
+import com.wethinkcode.hrsystem.security.CurrentUserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +18,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,6 +26,9 @@ class EmployeeDirectoryServiceTest {
 
     @Mock
     private EmployeeRepository employeeRepository;
+
+    @Mock
+    private CurrentUserService currentUserService;
 
     @InjectMocks
     private EmployeeDirectoryService employeeDirectoryService;
@@ -35,6 +40,7 @@ class EmployeeDirectoryServiceTest {
         branch = new Branch();
         branch.setId(1L);
         branch.setName("Cape Town");
+        lenient().when(currentUserService.isHrOrAdmin()).thenReturn(true);
     }
 
     // ---------- getDirectory() ----------
