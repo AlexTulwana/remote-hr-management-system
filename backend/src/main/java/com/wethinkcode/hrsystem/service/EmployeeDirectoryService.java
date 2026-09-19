@@ -44,20 +44,22 @@ public class EmployeeDirectoryService {
         }
         List<Employee> roots = employeeRepository.findByReportsToIsNull();
         return roots.stream()
-                .map(this::buildNode)
+                .map(root -> buildNode(root, null))
                 .toList();
     }
 
     public OrgChartNode getOrgChartFrom(Long employeeId) {
         Employee root = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
-        return buildNode(root);
+        return buildNode(root, null);
     }
 
-    private OrgChartNode buildNode(Employee employee) {
+    private OrgChartNode buildNode(Employee employee, Long onlyBranchId) {
         List<Employee> reports = employeeRepository.findByReportsToId(employee.getId());
         List<OrgChartNode> childNodes = reports.stream()
-                .map(this::buildNode)
+                .filter(r -> onlyBranchId == null
+                        || (r.getBranch() != null && onlyBranchId.equals(r.getBranch().getId())))
+                .map(r -> buildNode(r, onlyBranchId))
                 .toList();
 
         return new OrgChartNode(
