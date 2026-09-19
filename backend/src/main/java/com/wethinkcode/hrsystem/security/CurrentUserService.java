@@ -24,4 +24,15 @@ public class CurrentUserService {
         User current = getCurrentUser();
         return current.getEmployee() != null && current.getEmployee().getId().equals(employeeId);
     }
+
+    public boolean isHrOrAdmin() {
+        String role = getCurrentUser().getRole();
+        return "HR".equals(role) || "ADMIN".equals(role);
+    }
+
+    public Long getCurrentBranchId() {
+        User current = getCurrentUser();
+        return current.getEmployee() != null && current.getEmployee().getBranch() != null
+                ? current.getEmployee().getBranch().getId() : null;
+    }
 }
