@@ -2,7 +2,6 @@ import { useAuth } from '../auth/AuthContext';
 import Card from '../components/Card';
 import Avatar from '../components/Avatar';
 import Pill from '../components/Pill';
-import Button from '../components/Button';
 
 function initialsOf(name) {
   if (!name) return '?';
@@ -24,21 +23,16 @@ function Field({ label, value }) {
 }
 
 export default function Profile() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-3">
-          <Avatar initials={initialsOf(user.fullName)} size="md" />
-          <div>
-            <p className="text-[20px] font-medium">{user.fullName || user.username}</p>
-            <Pill variant="neutral">{user.role}</Pill>
-          </div>
+      <div className="flex items-center gap-3 mb-5">
+        <Avatar initials={initialsOf(user.fullName)} size="md" />
+        <div>
+          <p className="text-[20px] font-medium">{user.fullName || user.username}</p>
+          <Pill variant="neutral">{user.role}</Pill>
         </div>
-        <Button variant="secondary" onClick={logout}>
-          Log out
-        </Button>
       </div>
 
       <Card>
