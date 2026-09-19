@@ -6,6 +6,7 @@ import com.wethinkcode.hrsystem.model.User;
 import com.wethinkcode.hrsystem.repository.EmployeeRepository;
 import com.wethinkcode.hrsystem.repository.PayslipRepository;
 import com.wethinkcode.hrsystem.security.CurrentUserService;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +41,9 @@ class PayslipServiceTest {
     @Mock
     private CurrentUserService currentUserService;
 
+    @Mock
+    private JavaMailSender mailSender;
+
     @TempDir
     Path tempDir;
 
@@ -49,7 +53,7 @@ class PayslipServiceTest {
     @BeforeEach
     void setUp() {
         payslipService = new PayslipService(payslipRepository, employeeRepository,
-                currentUserService, tempDir.toString());
+                currentUserService, mailSender, tempDir.toString());
 
         employee = new Employee();
         employee.setId(1L);
