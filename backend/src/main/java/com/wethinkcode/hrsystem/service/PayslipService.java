@@ -4,8 +4,11 @@ import com.wethinkcode.hrsystem.model.Employee;
 import com.wethinkcode.hrsystem.model.Payslip;
 import com.wethinkcode.hrsystem.repository.EmployeeRepository;
 import com.wethinkcode.hrsystem.repository.PayslipRepository;
+import jakarta.mail.internet.MimeMessage;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import com.wethinkcode.hrsystem.security.CurrentUserService;
@@ -31,15 +34,18 @@ public class PayslipService {
     private final EmployeeRepository employeeRepository;
     private final String uploadDir;
     private final CurrentUserService currentUserService;
+    private final JavaMailSender mailSender;
 
 
     public PayslipService(PayslipRepository payslipRepository,
                           EmployeeRepository employeeRepository,
                           CurrentUserService currentUserService,
+                          JavaMailSender mailSender,
                           @Value("${payslip.upload-dir:uploads/payslips/}") String uploadDir) {
         this.payslipRepository = payslipRepository;
         this.employeeRepository = employeeRepository;
         this.currentUserService = currentUserService;
+        this.mailSender = mailSender;
         this.uploadDir = uploadDir.endsWith("/") ? uploadDir : uploadDir + "/";
     }
 
@@ -92,6 +98,31 @@ public class PayslipService {
             }
         } catch (MalformedURLException e) {
             throw new RuntimeException("Error loading file: " + e.getMessage());
+        }
+    }
+
+    public void emailToSelf(Long payslipId) {
+        Payslip payslip = getById(payslipId);
+        Employee employee = payslip.getEmployee();
+
+        if (employee.getEmail() == null || employee.getEmail().isBlank()) {
+            throw new RuntimeException("No email address on file for this employee");
+        }
+
+        Resource file = downloadFile(payslipId);
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+            helper.setTo(employee.getEmail());
+            helper.setSubject("Your payslip - " + payslip.getPayPeriod());
+            helper.setText("Hi " + employee.getFullName() + ",\n\n"
+                    + "Please find attached your payslip for " + payslip.getPayPeriod() + ".\n\n"
+                    + "Regards,\nHR Team");
+            helper.addAttachment("payslip-" + payslip.getPayPeriod() + ".pdf", file);
+            mailSender.send(message);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send payslip email: " + e.getMessage(), e);
         }
     }
 
