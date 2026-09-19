@@ -61,7 +61,10 @@ public class MessageService {
         if (!currentUserService.getCurrentUser().getId().equals(message.getRecipient().getId())) {
             throw new AccessDeniedException("You are not authorized to update this message");
         }
-        message.setRead(true);
+        if (!message.isRead()) {
+            message.setRead(true);
+            message.setReadAt(LocalDateTime.now());
+        }
         return messageRepository.save(message);
     }
 }
