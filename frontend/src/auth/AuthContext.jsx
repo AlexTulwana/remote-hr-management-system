@@ -39,6 +39,10 @@ export function AuthProvider({ children }) {
     navigate('/login');
   }, [navigate]);
 
+  const updateUser = useCallback((profile) => {
+    setUser((prev) => (prev ? { ...prev, ...profile } : prev));
+  }, []);
+
   useEffect(() => {
     userRef.current = user;
   }, [user]);
@@ -113,7 +117,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
