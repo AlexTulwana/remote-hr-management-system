@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import ErrorInline from '../components/ErrorInline';
+import SegmentClock from '../components/SegmentClock';
 
 const ROLE_HOME = {
   EMPLOYEE: '/employee/dashboard',
@@ -46,51 +47,6 @@ function CometRing() {
   );
 }
 
-function SegmentClock() {
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const segMap = {
-      0: [1, 1, 1, 0, 1, 1, 1], 1: [0, 0, 1, 0, 0, 1, 0], 2: [1, 0, 1, 1, 1, 0, 1],
-      3: [1, 0, 1, 1, 0, 1, 1], 4: [0, 1, 1, 1, 0, 1, 0], 5: [1, 1, 0, 1, 0, 1, 1],
-      6: [1, 1, 0, 1, 1, 1, 1], 7: [1, 0, 1, 0, 0, 1, 0], 8: [1, 1, 1, 1, 1, 1, 1],
-      9: [1, 1, 1, 1, 0, 1, 1],
-    };
-
-    function digitPaths(x, y, on) {
-      const w = 11, h = 19;
-      const s = [
-        [x, y, x + w, y], [x, y, x, y + h / 2], [x + w, y, x + w, y + h / 2],
-        [x, y + h / 2, x + w, y + h / 2], [x, y + h / 2, x, y + h],
-        [x + w, y + h / 2, x + w, y + h], [x, y + h, x + w, y + h],
-      ];
-      let o = '';
-      for (let i = 0; i < 7; i++) {
-        const c = on[i] ? '#f2f2f0' : '#2a2a28';
-        o += `<line x1="${s[i][0]}" y1="${s[i][1]}" x2="${s[i][2]}" y2="${s[i][3]}" stroke="${c}" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="2 2.5"/>`;
-      }
-      return o;
-    }
-
-    function render() {
-      const now = new Date();
-      const hh = String(now.getHours()).padStart(2, '0');
-      const mm = String(now.getMinutes()).padStart(2, '0');
-      const digits = hh + mm;
-      const xs = [2, 20, 62, 80];
-      let content = '';
-      for (let i = 0; i < 4; i++) content += digitPaths(xs[i], 6, segMap[digits[i]]);
-      content += '<circle cx="51" cy="12" r="1.5" fill="#6b6a65"/><circle cx="51" cy="24" r="1.5" fill="#6b6a65"/>';
-      ref.current.innerHTML = content;
-    }
-
-    render();
-    const id = setInterval(render, 30000);
-    return () => clearInterval(id);
-  }, []);
-
-  return <svg ref={ref} width="120" height="36" viewBox="0 0 120 36" role="img" aria-label="Current time" className="absolute top-4 right-4" />;
-}
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -117,7 +73,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-[#1a1a1a] flex justify-center items-start p-6">
       <div className="bg-[#0d0d0d] text-[#f2f2f0] rounded-xl px-4 pt-5 pb-8 relative w-[420px]">
-        <SegmentClock />
+        <SegmentClock className="absolute top-4 right-4" />
         <div className="flex justify-center">
           <div className="relative w-[380px] h-[380px]">
             <CometRing />
