@@ -52,6 +52,8 @@ class UserControllerTest {
         employee.setDepartment("Engineering");
         employee.setBranch(branch);
         employee.setEmploymentStatus("ACTIVE");
+        employee.setContactDetails("082 123 4567");
+        employee.setEmail("emma@example.com");
 
         User user = new User();
         user.setId(id);
@@ -86,7 +88,9 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.position").value("Software Engineer"))
                 .andExpect(jsonPath("$.department").value("Engineering"))
                 .andExpect(jsonPath("$.branchName").value("Cape Town"))
-                .andExpect(jsonPath("$.employmentStatus").value("ACTIVE"));
+                .andExpect(jsonPath("$.employmentStatus").value("ACTIVE"))
+                .andExpect(jsonPath("$.contactDetails").value("082 123 4567"))
+                .andExpect(jsonPath("$.email").value("emma@example.com"));
     }
 
     // ---- lookup() ----
