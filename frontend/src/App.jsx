@@ -128,6 +128,16 @@ function App() {
         }
       />
       <Route
+        path="/manager/my-requests"
+        element={
+          <ProtectedRoute allowedRoles={['MANAGER']}>
+            <AppLayout navItems={navItems}>
+              <MyRequests />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/profile"
         element={
           <ProtectedRoute>
