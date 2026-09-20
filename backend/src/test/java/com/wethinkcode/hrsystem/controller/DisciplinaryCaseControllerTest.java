@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wethinkcode.hrsystem.dto.DisciplinaryCaseRequest;
 import com.wethinkcode.hrsystem.model.DisciplinaryCase;
 import com.wethinkcode.hrsystem.model.DisciplinaryCaseHistory;
+import com.wethinkcode.hrsystem.model.Employee;
 import com.wethinkcode.hrsystem.security.JwtUtil;
 import com.wethinkcode.hrsystem.service.DisciplinaryCaseService;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -21,6 +23,7 @@ import java.util.Map;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(DisciplinaryCaseController.class)
@@ -54,7 +57,7 @@ class DisciplinaryCaseControllerTest {
     @Test
     @WithMockUser(username = "hrtest2", roles = "HR")
     void open_hrRole_isAllowed() throws Exception {
-        DisciplinaryCase saved = new DisciplinaryCase();
+        DisciplinaryCase saved = newCase();
         saved.setId(1L);
         when(disciplinaryCaseService.open(any(DisciplinaryCaseRequest.class), anyString())).thenReturn(saved);
 
@@ -80,7 +83,7 @@ class DisciplinaryCaseControllerTest {
     @Test
     @WithMockUser(username = "mgrtest1", roles = "MANAGER")
     void progress_managerRole_isAllowed() throws Exception {
-        DisciplinaryCase updated = new DisciplinaryCase();
+        DisciplinaryCase updated = newCase();
         updated.setId(1L);
         when(disciplinaryCaseService.progressStage(anyLong(), anyString(), any(), any(), anyString()))
                 .thenReturn(updated);
@@ -102,9 +105,9 @@ class DisciplinaryCaseControllerTest {
     @Test
     @WithMockUser(roles = "EMPLOYEE")
     void getById_employeeRole_isAllowed() throws Exception {
-        DisciplinaryCase caseObj = new DisciplinaryCase();
+        DisciplinaryCase caseObj = newCase();
         caseObj.setId(1L);
-        when(disciplinaryCaseService.getById(1L)).thenReturn(caseObj);
+        when(disciplinaryCaseService.getByIdForViewer(anyLong(), anyString())).thenReturn(caseObj);
 
         mockMvc.perform(get("/api/disciplinary-cases/1"))
                 .andExpect(status().isOk());
@@ -115,7 +118,7 @@ class DisciplinaryCaseControllerTest {
     @Test
     @WithMockUser(roles = "EMPLOYEE")
     void getHistory_employeeRole_isAllowed() throws Exception {
-        when(disciplinaryCaseService.getHistory(1L)).thenReturn(List.of(new DisciplinaryCaseHistory()));
+        when(disciplinaryCaseService.getHistoryForViewer(anyLong(), anyString())).thenReturn(List.of(new DisciplinaryCaseHistory()));
 
         mockMvc.perform(get("/api/disciplinary-cases/1/history"))
                 .andExpect(status().isOk());
@@ -127,7 +130,7 @@ class DisciplinaryCaseControllerTest {
     @WithMockUser(username = "emptest1", roles = "EMPLOYEE")
     void getByEmployee_employeeRole_isAllowed() throws Exception {
         when(disciplinaryCaseService.getByEmployeeForViewer(anyLong(), anyString()))
-                .thenReturn(List.of(new DisciplinaryCase()));
+                .thenReturn(List.of(newCase()));
 
         mockMvc.perform(get("/api/disciplinary-cases/employee/4"))
                 .andExpect(status().isOk());
@@ -145,7 +148,7 @@ class DisciplinaryCaseControllerTest {
     @Test
     @WithMockUser(roles = "MANAGER")
     void getByBranch_managerRole_isAllowed() throws Exception {
-        when(disciplinaryCaseService.getByBranch(1L)).thenReturn(List.of(new DisciplinaryCase()));
+        when(disciplinaryCaseService.getByBranch(anyLong(), anyString())).thenReturn(List.of(newCase()));
 
         mockMvc.perform(get("/api/disciplinary-cases/branch/1"))
                 .andExpect(status().isOk());
@@ -163,7 +166,7 @@ class DisciplinaryCaseControllerTest {
     @Test
     @WithMockUser(roles = "HR")
     void getAllOpen_hrRole_isAllowed() throws Exception {
-        when(disciplinaryCaseService.getAllOpen()).thenReturn(List.of(new DisciplinaryCase()));
+        when(disciplinaryCaseService.getAllOpen()).thenReturn(List.of(newCase()));
 
         mockMvc.perform(get("/api/disciplinary-cases/open"))
                 .andExpect(status().isOk());
@@ -181,9 +184,67 @@ class DisciplinaryCaseControllerTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void getAll_adminRole_isAllowed() throws Exception {
-        when(disciplinaryCaseService.getAll()).thenReturn(List.of(new DisciplinaryCase()));
+        when(disciplinaryCaseService.getAll()).thenReturn(List.of(newCase()));
 
         mockMvc.perform(get("/api/disciplinary-cases"))
                 .andExpect(status().isOk());
+    }
+
+    // ---- fixtures and access / leak tests ----
+
+    private DisciplinaryCase newCase() {
+        Employee employee = new Employee();
+        employee.setId(4L);
+        employee.setFullName("Emma Employee");
+        DisciplinaryCase disciplinaryCase = new DisciplinaryCase();
+        disciplinaryCase.setEmployee(employee);
+        return disciplinaryCase;
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void getById_deniedByService_returnsForbidden() throws Exception {
+        when(disciplinaryCaseService.getByIdForViewer(anyLong(), anyString()))
+                .thenThrow(new AccessDeniedException("Not authorized"));
+
+        mockMvc.perform(get("/api/disciplinary-cases/1"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void getHistory_deniedByService_returnsForbidden() throws Exception {
+        when(disciplinaryCaseService.getHistoryForViewer(anyLong(), anyString()))
+                .thenThrow(new AccessDeniedException("Not authorized"));
+
+        mockMvc.perform(get("/api/disciplinary-cases/1/history"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MANAGER")
+    void getByBranch_managerOtherBranch_deniedByService() throws Exception {
+        when(disciplinaryCaseService.getByBranch(anyLong(), anyString()))
+                .thenThrow(new AccessDeniedException("You can only view cases for your own branch"));
+
+        mockMvc.perform(get("/api/disciplinary-cases/branch/2"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MANAGER")
+    void getById_returnsSummaryWithoutSensitiveEmployeeFields() throws Exception {
+        DisciplinaryCase disciplinaryCase = newCase();
+        disciplinaryCase.getEmployee().setSalary(50000.0);
+        disciplinaryCase.getEmployee().setBankingDetails("test-bank-details");
+        disciplinaryCase.getEmployee().setIdNumber("test-id-number");
+        when(disciplinaryCaseService.getByIdForViewer(anyLong(), anyString())).thenReturn(disciplinaryCase);
+
+        mockMvc.perform(get("/api/disciplinary-cases/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.employee.fullName").value("Emma Employee"))
+                .andExpect(jsonPath("$.employee.salary").doesNotExist())
+                .andExpect(jsonPath("$.employee.bankingDetails").doesNotExist())
+                .andExpect(jsonPath("$.employee.idNumber").doesNotExist());
     }
 }
