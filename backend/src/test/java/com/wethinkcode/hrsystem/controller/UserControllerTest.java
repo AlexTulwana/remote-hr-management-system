@@ -3,7 +3,6 @@ package com.wethinkcode.hrsystem.controller;
 import com.wethinkcode.hrsystem.model.Branch;
 import com.wethinkcode.hrsystem.model.Employee;
 import com.wethinkcode.hrsystem.model.User;
-import com.wethinkcode.hrsystem.repository.UserRepository;
 import com.wethinkcode.hrsystem.security.CurrentUserService;
 import com.wethinkcode.hrsystem.security.JwtUtil;
 import com.wethinkcode.hrsystem.service.EmployeeService;
@@ -39,9 +38,6 @@ class UserControllerTest {
 
     @MockitoBean
     private CurrentUserService currentUserService;
-
-    @MockitoBean
-    private UserRepository userRepository;
 
     @MockitoBean
     private JwtUtil jwtUtil;
