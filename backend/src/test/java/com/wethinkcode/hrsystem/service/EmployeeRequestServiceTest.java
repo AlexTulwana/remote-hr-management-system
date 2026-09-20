@@ -417,4 +417,46 @@ class EmployeeRequestServiceTest {
         )
                 .isInstanceOf(AccessDeniedException.class);
     }
+
+    // --- getByBranch(Long, String) - new checked overload ---
+
+    @Test
+    void getByBranchChecked_managerOwnBranch_returnsRequests() {
+        when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(managerUser));
+        when(employeeRequestRepository.findByEmployeeBranchId(1L)).thenReturn(List.of(pendingRequest));
+
+        assertThat(employeeRequestService.getByBranch(1L, "mgrtest1")).containsExactly(pendingRequest);
+    }
+
+    @Test
+    void getByBranchChecked_managerOtherBranch_throwsAccessDeniedWithoutQuerying() {
+        when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(managerUser));
+
+        assertThatThrownBy(() -> employeeRequestService.getByBranch(2L, "mgrtest1"))
+                .isInstanceOf(AccessDeniedException.class);
+
+        verify(employeeRequestRepository, never()).findByEmployeeBranchId(any());
+    }
+
+    @Test
+    void getByBranchChecked_managerWithNoBranch_throwsAccessDenied() {
+        Employee branchless = new Employee();
+        branchless.setId(7L);
+        User user = new User();
+        user.setUsername("nobranch");
+        user.setRole("MANAGER");
+        user.setEmployee(branchless);
+        when(userRepository.findByUsername("nobranch")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> employeeRequestService.getByBranch(1L, "nobranch"))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void getByBranchChecked_hr_returnsAnyBranch() {
+        when(userRepository.findByUsername("hrtest2")).thenReturn(Optional.of(hrUser));
+        when(employeeRequestRepository.findByEmployeeBranchId(2L)).thenReturn(List.of(pendingRequest));
+
+        assertThat(employeeRequestService.getByBranch(2L, "hrtest2")).containsExactly(pendingRequest);
+    }
 }
