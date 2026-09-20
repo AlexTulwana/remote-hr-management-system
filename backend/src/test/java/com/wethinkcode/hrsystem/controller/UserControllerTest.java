@@ -53,6 +53,7 @@ class UserControllerTest {
         if (branchName != null) {
             branch = new Branch();
             branch.setName(branchName);
+            branch.setId(1L);
         }
 
         Employee employee = new Employee();
@@ -101,7 +102,8 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.branchName").value("Cape Town"))
                 .andExpect(jsonPath("$.employmentStatus").value("ACTIVE"))
                 .andExpect(jsonPath("$.contactDetails").value("082 123 4567"))
-                .andExpect(jsonPath("$.email").value("emma@example.com"));
+                .andExpect(jsonPath("$.email").value("emma@example.com"))
+                .andExpect(jsonPath("$.branchId").value(1));
     }
 
     // ---- lookup() ----
