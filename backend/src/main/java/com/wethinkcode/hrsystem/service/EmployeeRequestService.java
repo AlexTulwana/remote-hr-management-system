@@ -125,12 +125,15 @@ public class EmployeeRequestService {
             case "APPROVED", "REJECTED" -> {
                 request.setStatus(decision);
                 request.setResolvedAt(LocalDateTime.now());
+                request.setManagerComment(comment);
             }
-            case "ESCALATED" -> request.setStatus("ESCALATED");
+            case "ESCALATED" -> {
+                request.setStatus("ESCALATED");
+                request.setEscalationComment(comment);
+            }
             default -> throw new RuntimeException("Invalid decision: " + decision);
         }
 
-        request.setManagerComment(comment);
         request.setHandledBy(manager);
         return employeeRequestRepository.save(request);
     }
