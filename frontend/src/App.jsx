@@ -29,6 +29,7 @@ function navItemsFor(role) {
   }
   if (role === 'MANAGER') {
     items.push({ to: '/manager/dashboard', label: 'Dashboard' });
+    items.push({ to: '/manager/my-team', label: 'My Team' });
     items.push({ to: '/manager/leave-approvals', label: 'Leave Approvals' });
     items.push({ to: '/manager/team-requests', label: 'Team Requests' });
     items.push({ to: '/manager/my-requests', label: 'My Requests' });
