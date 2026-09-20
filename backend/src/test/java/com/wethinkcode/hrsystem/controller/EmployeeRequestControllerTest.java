@@ -22,6 +22,7 @@ import java.util.Map;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(EmployeeRequestController.class)
@@ -213,5 +214,56 @@ class EmployeeRequestControllerTest {
 
         mockMvc.perform(get("/api/employee-requests/branch/2"))
                 .andExpect(status().isForbidden());
+    }
+
+    // ---- escalation comment visibility ----
+
+    private EmployeeRequest escalatedRequest() {
+        EmployeeRequest request = new EmployeeRequest();
+        request.setId(1L);
+        request.setStatus("ESCALATED");
+        request.setEscalationComment("HR only note");
+        return request;
+    }
+
+    @Test
+    @WithMockUser(username = "emptest1", roles = "EMPLOYEE")
+    void getById_employeeRole_doesNotSeeEscalationComment() throws Exception {
+        when(employeeRequestService.getById(anyLong(), anyString())).thenReturn(escalatedRequest());
+
+        mockMvc.perform(get("/api/employee-requests/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.escalationComment").isEmpty());
+    }
+
+    @Test
+    @WithMockUser(username = "mgrtest1", roles = "MANAGER")
+    void getById_managerRole_seesEscalationComment() throws Exception {
+        when(employeeRequestService.getById(anyLong(), anyString())).thenReturn(escalatedRequest());
+
+        mockMvc.perform(get("/api/employee-requests/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.escalationComment").value("HR only note"));
+    }
+
+    @Test
+    @WithMockUser(username = "emptest1", roles = "EMPLOYEE")
+    void getByEmployee_employeeRole_doesNotSeeEscalationComment() throws Exception {
+        when(employeeRequestService.getByEmployee(anyLong(), anyString()))
+                .thenReturn(List.of(escalatedRequest()));
+
+        mockMvc.perform(get("/api/employee-requests/employee/4"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].escalationComment").isEmpty());
+    }
+
+    @Test
+    @WithMockUser(roles = "HR")
+    void getEscalated_hrRole_seesEscalationComment() throws Exception {
+        when(employeeRequestService.getEscalated()).thenReturn(List.of(escalatedRequest()));
+
+        mockMvc.perform(get("/api/employee-requests/escalated"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].escalationComment").value("HR only note"));
     }
 }
