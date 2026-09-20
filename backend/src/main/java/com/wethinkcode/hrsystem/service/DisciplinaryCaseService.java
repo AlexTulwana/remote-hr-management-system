@@ -185,6 +185,55 @@ public class DisciplinaryCaseService {
         return caseRepository.findByEmployeeBranchId(branchId);
     }
 
+    // NEW - access-checked lookups for controller use
+
+    private void requireCanView(User viewer, Employee target) {
+        String role = viewer.getRole();
+        if ("HR".equals(role) || "ADMIN".equals(role)) {
+            return;
+        }
+        if ("MANAGER".equals(role)) {
+            Long managerBranchId = viewer.getEmployee() != null && viewer.getEmployee().getBranch() != null
+                    ? viewer.getEmployee().getBranch().getId() : null;
+            Long targetBranchId = target.getBranch() != null ? target.getBranch().getId() : null;
+            if (managerBranchId != null && managerBranchId.equals(targetBranchId)) {
+                return;
+            }
+            throw new AccessDeniedException("Managers can only view cases for their own branch");
+        }
+        Long viewerEmployeeId = viewer.getEmployee() != null ? viewer.getEmployee().getId() : null;
+        if (viewerEmployeeId == null || !viewerEmployeeId.equals(target.getId())) {
+            throw new AccessDeniedException("You can only view your own disciplinary case history");
+        }
+    }
+
+    public DisciplinaryCase getByIdForViewer(Long id, String username) {
+        User viewer = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        DisciplinaryCase disciplinaryCase = getById(id);
+        requireCanView(viewer, disciplinaryCase.getEmployee());
+        return disciplinaryCase;
+    }
+
+    public List<DisciplinaryCaseHistory> getHistoryForViewer(Long caseId, String username) {
+        getByIdForViewer(caseId, username);
+        return getHistory(caseId);
+    }
+
+    public List<DisciplinaryCase> getByBranch(Long branchId, String username) {
+        User viewer = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        String role = viewer.getRole();
+        if (!"HR".equals(role) && !"ADMIN".equals(role)) {
+            Long callerBranchId = viewer.getEmployee() != null && viewer.getEmployee().getBranch() != null
+                    ? viewer.getEmployee().getBranch().getId() : null;
+            if (callerBranchId == null || !callerBranchId.equals(branchId)) {
+                throw new AccessDeniedException("You can only view cases for your own branch");
+            }
+        }
+        return getByBranch(branchId);
+    }
+
     public List<DisciplinaryCase> getAllOpen() {
         return caseRepository.findByClosedFalse();
     }
