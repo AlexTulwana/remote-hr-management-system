@@ -459,4 +459,32 @@ class EmployeeRequestServiceTest {
 
         assertThat(employeeRequestService.getByBranch(2L, "hrtest2")).containsExactly(pendingRequest);
     }
+
+    // --- escalation comment routing ---
+
+    @Test
+    void managerDecision_escalate_storesCommentAsEscalationCommentOnly() {
+        when(employeeRequestRepository.findById(1L)).thenReturn(Optional.of(pendingRequest));
+        when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(managerUser));
+        when(employeeRequestRepository.save(any(EmployeeRequest.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        EmployeeRequest result = employeeRequestService.managerDecision(
+                1L, "ESCALATED", "Needs HR review", "mgrtest1");
+
+        assertThat(result.getEscalationComment()).isEqualTo("Needs HR review");
+        assertThat(result.getManagerComment()).isNull();
+    }
+
+    @Test
+    void managerDecision_approve_doesNotSetEscalationComment() {
+        when(employeeRequestRepository.findById(1L)).thenReturn(Optional.of(pendingRequest));
+        when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(managerUser));
+        when(employeeRequestRepository.save(any(EmployeeRequest.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        EmployeeRequest result = employeeRequestService.managerDecision(
+                1L, "APPROVED", "Looks fine", "mgrtest1");
+
+        assertThat(result.getManagerComment()).isEqualTo("Looks fine");
+        assertThat(result.getEscalationComment()).isNull();
+    }
 }
