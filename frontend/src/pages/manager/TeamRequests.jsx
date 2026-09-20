@@ -35,7 +35,7 @@ const DECISIONS = {
     confirm: 'Escalate',
     busy: 'Escalating…',
     required: true,
-    hint: 'Explain why HR should decide — the employee will see this.',
+    hint: 'Explain why HR should decide — only managers and HR will see this.',
   },
 };
 
@@ -234,6 +234,11 @@ export default function TeamRequests() {
                       ) : null}
                       {r.hrComment ? (
                         <p className="text-[12px] text-text-secondary mt-1">HR: {r.hrComment}</p>
+                      ) : null}
+                      {r.escalationComment ? (
+                        <p className="text-[12px] text-text-secondary mt-1">
+                          Escalation note (not shown to the employee): {r.escalationComment}
+                        </p>
                       ) : null}
                     </div>
                     <Pill variant={STATUS_VARIANT[r.status] || 'neutral'}>{r.status}</Pill>
