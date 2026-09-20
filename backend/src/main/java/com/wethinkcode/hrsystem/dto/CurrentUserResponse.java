@@ -15,7 +15,8 @@ public record CurrentUserResponse(
         String branchName,
         String employmentStatus,
         String contactDetails,
-        String email
+        String email,
+        Long branchId
 ) {
     public static CurrentUserResponse from(User user) {
         Employee employee = user.getEmployee();
@@ -31,7 +32,8 @@ public record CurrentUserResponse(
                 employee != null && employee.getBranch() != null ? employee.getBranch().getName() : null,
                 employee != null ? employee.getEmploymentStatus() : null,
                 employee != null ? employee.getContactDetails() : null,
-                employee != null ? employee.getEmail() : null
+                employee != null ? employee.getEmail() : null,
+                employee != null && employee.getBranch() != null ? employee.getBranch().getId() : null
         );
     }
 }
