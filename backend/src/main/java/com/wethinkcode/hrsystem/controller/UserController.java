@@ -4,7 +4,6 @@ import com.wethinkcode.hrsystem.dto.CurrentUserResponse;
 import com.wethinkcode.hrsystem.dto.MessageRecipientOption;
 import com.wethinkcode.hrsystem.dto.UpdateContactRequest;
 import com.wethinkcode.hrsystem.model.User;
-import com.wethinkcode.hrsystem.repository.UserRepository;
 import com.wethinkcode.hrsystem.security.CurrentUserService;
 import com.wethinkcode.hrsystem.service.EmployeeService;
 import com.wethinkcode.hrsystem.service.MessageService;
@@ -23,14 +22,12 @@ import java.util.List;
 public class UserController {
 
     private final CurrentUserService currentUserService;
-    private final UserRepository userRepository;
     private final EmployeeService employeeService;
     private final MessageService messageService;
 
-    public UserController(CurrentUserService currentUserService, UserRepository userRepository,
-                          EmployeeService employeeService, MessageService messageService) {
+    public UserController(CurrentUserService currentUserService, EmployeeService employeeService,
+                          MessageService messageService) {
         this.currentUserService = currentUserService;
-        this.userRepository = userRepository;
         this.employeeService = employeeService;
         this.messageService = messageService;
     }
