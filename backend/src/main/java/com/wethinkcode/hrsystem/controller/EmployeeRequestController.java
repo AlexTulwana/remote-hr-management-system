@@ -64,8 +64,9 @@ public class EmployeeRequestController {
 
     @PreAuthorize("hasRole('MANAGER') or hasRole('HR') or hasRole('ADMIN')")
     @GetMapping("/branch/{branchId}")
-    public ResponseEntity<List<EmployeeRequestSummary>> getByBranch(@PathVariable Long branchId) {
-        return ResponseEntity.ok(employeeRequestService.getByBranch(branchId).stream()
+    public ResponseEntity<List<EmployeeRequestSummary>> getByBranch(@PathVariable Long branchId,
+                                                                    Authentication authentication) {
+        return ResponseEntity.ok(employeeRequestService.getByBranch(branchId, authentication.getName()).stream()
                 .map(EmployeeRequestSummary::from).toList());
     }
 

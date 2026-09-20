@@ -163,7 +163,7 @@ class EmployeeRequestControllerTest {
     @Test
     @WithMockUser(roles = "MANAGER")
     void getByBranch_managerRole_isAllowed() throws Exception {
-        when(employeeRequestService.getByBranch(1L)).thenReturn(List.of(new EmployeeRequest()));
+        when(employeeRequestService.getByBranch(anyLong(), anyString())).thenReturn(List.of(new EmployeeRequest()));
 
         mockMvc.perform(get("/api/employee-requests/branch/1"))
                 .andExpect(status().isOk());
@@ -203,5 +203,15 @@ class EmployeeRequestControllerTest {
 
         mockMvc.perform(get("/api/employee-requests/escalated"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "MANAGER")
+    void getByBranch_managerOtherBranch_deniedByService() throws Exception {
+        when(employeeRequestService.getByBranch(anyLong(), anyString()))
+                .thenThrow(new AccessDeniedException("You can only view requests for your own branch"));
+
+        mockMvc.perform(get("/api/employee-requests/branch/2"))
+                .andExpect(status().isForbidden());
     }
 }
