@@ -64,18 +64,17 @@ function Composer({ onSent }) {
       .catch(() => setBranches([]));
   }, [canBrowseBranches]);
 
-  function handleQueryChange(value) {
-    setQuery(value);
-    setRecipient(null);
+  function runLookup(value, branch) {
     clearTimeout(debounceRef.current);
-    if (value.trim().length < 2) {
+    const trimmed = value.trim();
+    if (trimmed.length < 2 && !branch) {
       setResults([]);
       return;
     }
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
       try {
-        const matches = await lookupUsers(value.trim());
+        const matches = await lookupUsers(trimmed.length >= 2 ? trimmed : '', branch);
         setResults(matches);
       } catch {
         setResults([]);
@@ -83,6 +82,24 @@ function Composer({ onSent }) {
         setSearching(false);
       }
     }, 300);
+  }
+
+  function handleQueryChange(value) {
+    setQuery(value);
+    setRecipient(null);
+    runLookup(value, branchId);
+  }
+
+  function selectBranch(id) {
+    const next = branchId === id ? null : id;
+    setBranchId(next);
+    let nextQuery = query;
+    if (recipient) {
+      setRecipient(null);
+      setQuery('');
+      nextQuery = '';
+    }
+    runLookup(nextQuery, next);
   }
 
   function pickRecipient(person) {
@@ -119,7 +136,7 @@ function Composer({ onSent }) {
             <button
               key={b.id}
               type="button"
-              onClick={() => setBranchId(branchId === b.id ? null : b.id)}
+              onClick={() => selectBranch(b.id)}
               className={[
                 'h-7 px-3 rounded-full text-[12px] font-medium border transition-colors duration-200 cursor-pointer',
                 branchId === b.id
@@ -141,7 +158,7 @@ function Composer({ onSent }) {
           className="w-full h-9 rounded-lg border border-border bg-surface-2 px-3 text-[13px] focus:outline-none focus:border-border-strong"
         />
         {results.length > 0 ? (
-          <div className="absolute z-10 top-10 left-0 right-0 bg-surface-2 border border-border rounded-lg overflow-hidden">
+          <div className="absolute z-10 top-10 left-0 right-0 bg-surface-2 border border-border rounded-lg max-h-64 overflow-y-auto">
             {results.map((person) => (
               <button
                 key={person.userId}
