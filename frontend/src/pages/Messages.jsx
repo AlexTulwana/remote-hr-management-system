@@ -154,6 +154,11 @@ export default function Messages() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [expandedId, setExpandedId] = useState(null);
+
+  function toggleMessage(message) {
+    setExpandedId((current) => (current === message.id ? null : message.id));
+  }
 
   async function loadInbox() {
     setLoading(true);
@@ -203,7 +208,16 @@ export default function Messages() {
             return (
               <div
                 key={m.id}
-                className="flex items-start gap-2.5 px-3.5 py-2.5 border-b border-border last:border-b-0 hover:bg-surface-1 transition-colors duration-200"
+                role="button"
+                tabIndex={0}
+                onClick={() => toggleMessage(m)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleMessage(m);
+                  }
+                }}
+                className="flex items-start gap-2.5 px-3.5 py-2.5 border-b border-border last:border-b-0 hover:bg-surface-1 transition-colors duration-200 cursor-pointer"
               >
                 <Avatar initials={initialsOf(otherName)} size="sm" />
                 <div className="flex-1 min-w-0">
@@ -214,7 +228,14 @@ export default function Messages() {
                     </p>
                     <p className="text-[11px] text-text-muted shrink-0">{formatTime(m.sentAt)}</p>
                   </div>
-                  <p className="text-[13px] text-text-secondary truncate">{m.content}</p>
+                  <p
+                    className={[
+                      'text-[13px] text-text-secondary',
+                      expandedId === m.id ? 'whitespace-pre-wrap break-words' : 'truncate',
+                    ].join(' ')}
+                  >
+                    {m.content}
+                  </p>
                 </div>
                 <div className="shrink-0">
                   <StatusPill message={m} isOutgoing={isOutgoing} />
