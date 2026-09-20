@@ -2,6 +2,7 @@ package com.wethinkcode.hrsystem.controller;
 
 import com.wethinkcode.hrsystem.dto.EmployeeRequestSubmission;
 import com.wethinkcode.hrsystem.dto.EmployeeRequestSummary;
+import com.wethinkcode.hrsystem.model.EmployeeRequest;
 import com.wethinkcode.hrsystem.repository.UserRepository;
 import com.wethinkcode.hrsystem.service.EmployeeRequestService;
 import org.springframework.http.HttpStatus;
@@ -26,6 +27,19 @@ public class EmployeeRequestController {
         this.userRepository = userRepository;
     }
 
+    private boolean isStaff(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_MANAGER")
+                        || a.getAuthority().equals("ROLE_HR")
+                        || a.getAuthority().equals("ROLE_ADMIN"));
+    }
+
+    private EmployeeRequestSummary toSummary(EmployeeRequest request, Authentication authentication) {
+        return isStaff(authentication)
+                ? EmployeeRequestSummary.forStaff(request)
+                : EmployeeRequestSummary.from(request);
+    }
+
     @PostMapping
     public ResponseEntity<EmployeeRequestSummary> submit(@RequestBody EmployeeRequestSubmission submission,
                                                     Authentication authentication) {
@@ -38,7 +52,7 @@ public class EmployeeRequestController {
     public ResponseEntity<EmployeeRequestSummary> managerDecision(@PathVariable Long id,
                                                              @RequestBody Map<String, String> body,
                                                              Authentication authentication) {
-        return ResponseEntity.ok(EmployeeRequestSummary.from(employeeRequestService.managerDecision(
+        return ResponseEntity.ok(EmployeeRequestSummary.forStaff(employeeRequestService.managerDecision(
                 id, body.get("decision"), body.get("comment"), authentication.getName())));
     }
 
@@ -47,19 +61,19 @@ public class EmployeeRequestController {
     public ResponseEntity<EmployeeRequestSummary> hrDecision(@PathVariable Long id,
                                                         @RequestBody Map<String, String> body,
                                                         Authentication authentication) {
-        return ResponseEntity.ok(EmployeeRequestSummary.from(employeeRequestService.hrDecision(
+        return ResponseEntity.ok(EmployeeRequestSummary.forStaff(employeeRequestService.hrDecision(
                 id, body.get("decision"), body.get("comment"), authentication.getName())));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<EmployeeRequestSummary> getById(@PathVariable Long id, Authentication authentication) {
-        return ResponseEntity.ok(EmployeeRequestSummary.from(employeeRequestService.getById(id, authentication.getName())));
+        return ResponseEntity.ok(toSummary(employeeRequestService.getById(id, authentication.getName()), authentication));
     }
 
     @GetMapping("/employee/{employeeId}")
     public ResponseEntity<List<EmployeeRequestSummary>> getByEmployee(@PathVariable Long employeeId, Authentication authentication) {
         return ResponseEntity.ok(employeeRequestService.getByEmployee(employeeId, authentication.getName()).stream()
-                .map(EmployeeRequestSummary::from).toList());
+                .map(r -> toSummary(r, authentication)).toList());
     }
 
     @PreAuthorize("hasRole('MANAGER') or hasRole('HR') or hasRole('ADMIN')")
@@ -67,20 +81,20 @@ public class EmployeeRequestController {
     public ResponseEntity<List<EmployeeRequestSummary>> getByBranch(@PathVariable Long branchId,
                                                                     Authentication authentication) {
         return ResponseEntity.ok(employeeRequestService.getByBranch(branchId, authentication.getName()).stream()
-                .map(EmployeeRequestSummary::from).toList());
+                .map(EmployeeRequestSummary::forStaff).toList());
     }
 
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<EmployeeRequestSummary>> getAll() {
         return ResponseEntity.ok(employeeRequestService.getAll().stream()
-                .map(EmployeeRequestSummary::from).toList());
+                .map(EmployeeRequestSummary::forStaff).toList());
     }
 
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping("/escalated")
     public ResponseEntity<List<EmployeeRequestSummary>> getEscalated() {
         return ResponseEntity.ok(employeeRequestService.getEscalated().stream()
-                .map(EmployeeRequestSummary::from).toList());
+                .map(EmployeeRequestSummary::forStaff).toList());
     }
 }
