@@ -371,4 +371,101 @@ class DisciplinaryCaseServiceTest {
 
         assertThat(disciplinaryCaseService.getAll()).containsExactly(openCase);
     }
+
+    // --- getByIdForViewer ---
+
+    @Test
+    void getByIdForViewer_hr_allowed() {
+        when(userRepository.findByUsername("hrtest2")).thenReturn(Optional.of(hrUser));
+        when(caseRepository.findById(1L)).thenReturn(Optional.of(openCase));
+
+        assertThat(disciplinaryCaseService.getByIdForViewer(1L, "hrtest2")).isEqualTo(openCase);
+    }
+
+    @Test
+    void getByIdForViewer_managerSameBranch_allowed() {
+        when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(sameBranchManager));
+        when(caseRepository.findById(1L)).thenReturn(Optional.of(openCase));
+
+        assertThat(disciplinaryCaseService.getByIdForViewer(1L, "mgrtest1")).isEqualTo(openCase);
+    }
+
+    @Test
+    void getByIdForViewer_managerOtherBranch_throwsAccessDenied() {
+        when(userRepository.findByUsername("othermgr")).thenReturn(Optional.of(otherBranchManager));
+        when(caseRepository.findById(1L)).thenReturn(Optional.of(openCase));
+
+        assertThatThrownBy(() -> disciplinaryCaseService.getByIdForViewer(1L, "othermgr"))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessage("Managers can only view cases for their own branch");
+    }
+
+    @Test
+    void getByIdForViewer_employeeOwnCase_allowed() {
+        when(userRepository.findByUsername("emptest1")).thenReturn(Optional.of(selfEmployeeUser));
+        when(caseRepository.findById(1L)).thenReturn(Optional.of(openCase));
+
+        assertThat(disciplinaryCaseService.getByIdForViewer(1L, "emptest1")).isEqualTo(openCase);
+    }
+
+    @Test
+    void getByIdForViewer_employeeOtherCase_throwsAccessDenied() {
+        when(userRepository.findByUsername("otheremp")).thenReturn(Optional.of(otherEmployeeUser));
+        when(caseRepository.findById(1L)).thenReturn(Optional.of(openCase));
+
+        assertThatThrownBy(() -> disciplinaryCaseService.getByIdForViewer(1L, "otheremp"))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessage("You can only view your own disciplinary case history");
+    }
+
+    // --- getHistoryForViewer ---
+
+    @Test
+    void getHistoryForViewer_allowed_returnsHistory() {
+        DisciplinaryCaseHistory entry = new DisciplinaryCaseHistory();
+        when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(sameBranchManager));
+        when(caseRepository.findById(1L)).thenReturn(Optional.of(openCase));
+        when(historyRepository.findByDisciplinaryCaseIdOrderByActionedAtAsc(1L)).thenReturn(List.of(entry));
+
+        assertThat(disciplinaryCaseService.getHistoryForViewer(1L, "mgrtest1")).containsExactly(entry);
+    }
+
+    @Test
+    void getHistoryForViewer_denied_doesNotQueryHistory() {
+        when(userRepository.findByUsername("othermgr")).thenReturn(Optional.of(otherBranchManager));
+        when(caseRepository.findById(1L)).thenReturn(Optional.of(openCase));
+
+        assertThatThrownBy(() -> disciplinaryCaseService.getHistoryForViewer(1L, "othermgr"))
+                .isInstanceOf(AccessDeniedException.class);
+
+        verify(historyRepository, never()).findByDisciplinaryCaseIdOrderByActionedAtAsc(any());
+    }
+
+    // --- getByBranch(Long, String) checked ---
+
+    @Test
+    void getByBranchChecked_managerOwnBranch_returnsCases() {
+        when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(sameBranchManager));
+        when(caseRepository.findByEmployeeBranchId(1L)).thenReturn(List.of(openCase));
+
+        assertThat(disciplinaryCaseService.getByBranch(1L, "mgrtest1")).containsExactly(openCase);
+    }
+
+    @Test
+    void getByBranchChecked_managerOtherBranch_throwsAccessDeniedWithoutQuerying() {
+        when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(sameBranchManager));
+
+        assertThatThrownBy(() -> disciplinaryCaseService.getByBranch(2L, "mgrtest1"))
+                .isInstanceOf(AccessDeniedException.class);
+
+        verify(caseRepository, never()).findByEmployeeBranchId(any());
+    }
+
+    @Test
+    void getByBranchChecked_hr_returnsAnyBranch() {
+        when(userRepository.findByUsername("hrtest2")).thenReturn(Optional.of(hrUser));
+        when(caseRepository.findByEmployeeBranchId(2L)).thenReturn(List.of(openCase));
+
+        assertThat(disciplinaryCaseService.getByBranch(2L, "hrtest2")).containsExactly(openCase);
+    }
 }
