@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { getInbox, sendMessage } from '../api/messages';
+import { getInbox, sendMessage, markAsRead } from '../api/messages';
 import { lookupUsers } from '../api/users';
 import Card from '../components/Card';
 import Button from '../components/Button';
@@ -161,8 +161,18 @@ export default function Messages() {
   const [error, setError] = useState('');
   const [expandedId, setExpandedId] = useState(null);
 
-  function toggleMessage(message) {
-    setExpandedId((current) => (current === message.id ? null : message.id));
+  async function toggleMessage(message) {
+    const opening = expandedId !== message.id;
+    setExpandedId(opening ? message.id : null);
+
+    const isIncoming = message.senderId !== user.userId;
+    if (!opening || !isIncoming || message.read) return;
+    try {
+      const updated = await markAsRead(message.id);
+      setMessages((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+    } catch {
+      // leave it unread; opening it again retries
+    }
   }
 
   async function loadInbox() {
