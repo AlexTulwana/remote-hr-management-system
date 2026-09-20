@@ -11,6 +11,7 @@ import Attendance from './pages/employee/Attendance';
 import MyRequests from './pages/employee/MyRequests';
 import Payslips from './pages/employee/Payslips';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
+import MyTeam from './pages/manager/MyTeam';
 import LeaveApprovals from './pages/manager/LeaveApprovals';
 import TeamRequests from './pages/manager/TeamRequests';
 import AppLayout from './components/AppLayout';
@@ -104,6 +105,16 @@ function App() {
           <ProtectedRoute allowedRoles={['MANAGER']}>
             <AppLayout navItems={navItems}>
               <ManagerDashboard />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/manager/my-team"
+        element={
+          <ProtectedRoute allowedRoles={['MANAGER']}>
+            <AppLayout navItems={navItems}>
+              <MyTeam />
             </AppLayout>
           </ProtectedRoute>
         }
