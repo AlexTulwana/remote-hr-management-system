@@ -100,6 +100,10 @@ public class DisciplinaryCaseService {
             if (newStage != DisciplinaryStage.VERBAL_WARNING && newStage != DisciplinaryStage.WRITTEN_WARNING) {
                 throw new AccessDeniedException("Managers can only issue verbal or written warnings");
             }
+            DisciplinaryStage currentStage = disciplinaryCase.getCurrentStage();
+            if (currentStage != DisciplinaryStage.VERBAL_WARNING && currentStage != DisciplinaryStage.WRITTEN_WARNING) {
+                throw new AccessDeniedException("Managers can only change cases that are at a verbal or written warning");
+            }
             Long managerBranchId = actor.getEmployee() != null && actor.getEmployee().getBranch() != null
                     ? actor.getEmployee().getBranch().getId() : null;
             Long employeeBranchId = disciplinaryCase.getEmployee().getBranch() != null
