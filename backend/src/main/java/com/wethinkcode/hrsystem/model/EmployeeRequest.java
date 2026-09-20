@@ -38,5 +38,8 @@ public class EmployeeRequest {
     @Column(length = 1000)
     private String hrComment;
 
+    @Column(length = 1000)
+    private String escalationComment; // for HR only, never shown to the employee
+
     private LocalDateTime resolvedAt;
 }
