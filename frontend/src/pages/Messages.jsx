@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { getInbox, sendMessage, markAsRead } from '../api/messages';
 import { lookupUsers } from '../api/users';
+import { getBranches } from '../api/branches';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Avatar from '../components/Avatar';
@@ -43,6 +44,10 @@ function StatusPill({ message, isOutgoing }) {
 }
 
 function Composer({ onSent }) {
+  const { user } = useAuth();
+  const canBrowseBranches = user.role === 'HR' || user.role === 'ADMIN';
+  const [branches, setBranches] = useState([]);
+  const [branchId, setBranchId] = useState(null);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [recipient, setRecipient] = useState(null);
@@ -51,6 +56,13 @@ function Composer({ onSent }) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const debounceRef = useRef(null);
+
+  useEffect(() => {
+    if (!canBrowseBranches) return;
+    getBranches()
+      .then(setBranches)
+      .catch(() => setBranches([]));
+  }, [canBrowseBranches]);
 
   function handleQueryChange(value) {
     setQuery(value);
@@ -99,6 +111,27 @@ function Composer({ onSent }) {
   return (
     <Card className="mb-5">
       <p className="text-[13px] font-medium text-text-secondary mb-3">New message</p>
+
+      {canBrowseBranches && branches.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 mb-2.5">
+          <span className="text-[12px] text-text-secondary">Branch</span>
+          {branches.map((b) => (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => setBranchId(branchId === b.id ? null : b.id)}
+              className={[
+                'h-7 px-3 rounded-full text-[12px] font-medium border transition-colors duration-200 cursor-pointer',
+                branchId === b.id
+                  ? 'bg-text-primary text-surface-2 border-transparent'
+                  : 'bg-surface-2 text-text-primary border-border-strong hover:bg-surface-1',
+              ].join(' ')}
+            >
+              {b.name}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       <div className="relative mb-2.5">
         <input
