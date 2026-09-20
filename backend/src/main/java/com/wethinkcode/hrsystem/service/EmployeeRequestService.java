@@ -159,6 +159,21 @@ public class EmployeeRequestService {
         return employeeRequestRepository.findByEmployeeBranchId(branchId);
     }
 
+    // NEW - checked version for controller use
+    public List<EmployeeRequest> getByBranch(Long branchId, String username) {
+        User current = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        String role = current.getRole();
+        if (!"HR".equals(role) && !"ADMIN".equals(role)) {
+            Long callerBranchId = current.getEmployee() != null && current.getEmployee().getBranch() != null
+                    ? current.getEmployee().getBranch().getId() : null;
+            if (callerBranchId == null || !callerBranchId.equals(branchId)) {
+                throw new AccessDeniedException("You can only view requests for your own branch");
+            }
+        }
+        return getByBranch(branchId);
+    }
+
     public List<EmployeeRequest> getAll() {
         return employeeRequestRepository.findAll();
     }
