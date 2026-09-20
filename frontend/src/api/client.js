@@ -39,7 +39,7 @@ export async function apiFetch(path, options = {}) {
     let message = `Request failed (${response.status})`;
     try {
       const body = await response.json();
-      message = body.message || message;
+      message = body.message || body.error || message;
     } catch {
       // response wasn't JSON, keep default message
     }
@@ -76,7 +76,7 @@ export async function apiFetchFormData(path, formData, options = {}) {
     let message = `Request failed (${response.status})`;
     try {
       const body = await response.json();
-      message = body.message || message;
+      message = body.message || body.error || message;
     } catch {
       // response wasn't JSON, keep default message
     }
