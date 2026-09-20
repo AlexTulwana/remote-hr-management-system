@@ -21,6 +21,22 @@ function formatTime(sentAt) {
   return date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+function StatusPill({ message, isOutgoing }) {
+  if (isOutgoing) {
+    if (!message.read) return <Pill variant="neutral">Not read yet</Pill>;
+    return (
+      <Pill variant="success">
+        {message.readAt ? `Read ${formatTime(message.readAt)}` : 'Read'}
+      </Pill>
+    );
+  }
+  return message.read ? (
+    <Pill variant="success">Read</Pill>
+  ) : (
+    <Pill variant="urgent">Unread</Pill>
+  );
+}
+
 function Composer({ onSent }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -200,7 +216,9 @@ export default function Messages() {
                   </div>
                   <p className="text-[13px] text-text-secondary truncate">{m.content}</p>
                 </div>
-                {!isOutgoing && !m.read ? <Pill variant="urgent">Unread</Pill> : null}
+                <div className="shrink-0">
+                  <StatusPill message={m} isOutgoing={isOutgoing} />
+                </div>
               </div>
             );
           })
