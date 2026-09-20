@@ -21,6 +21,11 @@ function formatTime(sentAt) {
   return date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+function readLabel(message) {
+  if (!message.read) return 'Not read yet';
+  return message.readAt ? `Read ${formatTime(message.readAt)}` : 'Read';
+}
+
 function StatusPill({ message, isOutgoing }) {
   if (isOutgoing) {
     if (!message.read) return <Pill variant="neutral">Not read yet</Pill>;
@@ -217,7 +222,10 @@ export default function Messages() {
                     toggleMessage(m);
                   }
                 }}
-                className="flex items-start gap-2.5 px-3.5 py-2.5 border-b border-border last:border-b-0 hover:bg-surface-1 transition-colors duration-200 cursor-pointer"
+                className={[
+                  'flex items-start gap-2.5 px-3.5 py-2.5 border-b border-border last:border-b-0 hover:bg-surface-1 transition-colors duration-200 cursor-pointer',
+                  expandedId === m.id ? 'bg-surface-1' : '',
+                ].join(' ')}
               >
                 <Avatar initials={initialsOf(otherName)} size="sm" />
                 <div className="flex-1 min-w-0">
@@ -236,6 +244,15 @@ export default function Messages() {
                   >
                     {m.content}
                   </p>
+                  {expandedId === m.id ? (
+                    <div className="mt-2 pt-2 border-t border-border text-[11px] text-text-muted flex flex-col gap-0.5">
+                      <p>
+                        From {m.senderName} to {m.recipientName}
+                      </p>
+                      <p>Sent {formatTime(m.sentAt)}</p>
+                      <p>{readLabel(m)}</p>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="shrink-0">
                   <StatusPill message={m} isOutgoing={isOutgoing} />
