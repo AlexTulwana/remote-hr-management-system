@@ -468,4 +468,43 @@ class DisciplinaryCaseServiceTest {
 
         assertThat(disciplinaryCaseService.getByBranch(2L, "hrtest2")).containsExactly(openCase);
     }
+
+    // --- manager stage limits ---
+
+    @Test
+    void progressStage_managerOnHearingStageCase_throwsAccessDenied() {
+        openCase.setCurrentStage(DisciplinaryStage.HEARING);
+        when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(sameBranchManager));
+        when(caseRepository.findById(1L)).thenReturn(Optional.of(openCase));
+
+        assertThatThrownBy(() -> disciplinaryCaseService.progressStage(1L, "VERBAL_WARNING", "x", null, "mgrtest1"))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessage("Managers can only change cases that are at a verbal or written warning");
+
+        verify(caseRepository, never()).save(any());
+    }
+
+    @Test
+    void progressStage_managerVerbalToWritten_succeeds() {
+        when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(sameBranchManager));
+        when(caseRepository.findById(1L)).thenReturn(Optional.of(openCase));
+        when(caseRepository.save(any(DisciplinaryCase.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        DisciplinaryCase result = disciplinaryCaseService.progressStage(1L, "WRITTEN_WARNING", "Repeat offence", null, "mgrtest1");
+
+        assertThat(result.getCurrentStage()).isEqualTo(DisciplinaryStage.WRITTEN_WARNING);
+        assertThat(result.isClosed()).isFalse();
+    }
+
+    @Test
+    void progressStage_managerWrittenBackToVerbal_succeeds() {
+        openCase.setCurrentStage(DisciplinaryStage.WRITTEN_WARNING);
+        when(userRepository.findByUsername("mgrtest1")).thenReturn(Optional.of(sameBranchManager));
+        when(caseRepository.findById(1L)).thenReturn(Optional.of(openCase));
+        when(caseRepository.save(any(DisciplinaryCase.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        DisciplinaryCase result = disciplinaryCaseService.progressStage(1L, "VERBAL_WARNING", "Issued in error", null, "mgrtest1");
+
+        assertThat(result.getCurrentStage()).isEqualTo(DisciplinaryStage.VERBAL_WARNING);
+    }
 }
