@@ -2,6 +2,7 @@ package com.wethinkcode.hrsystem.dto;
 
 import lombok.Data;
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 public class AnnouncementRequest {
@@ -9,5 +10,5 @@ public class AnnouncementRequest {
     private String content;
     private String category;
     private LocalDate expiryDate;
-    private Long branchId; // null = post to all branches (HR/ADMIN only); Manager must set their own branch
+    private List<Long> branchIds; // null or empty = everyone (HR/ADMIN only); a manager must list exactly their own branch
 }

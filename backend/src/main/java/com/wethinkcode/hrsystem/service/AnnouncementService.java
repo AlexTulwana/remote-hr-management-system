@@ -9,12 +9,11 @@ import com.wethinkcode.hrsystem.repository.AnnouncementRepository;
 import com.wethinkcode.hrsystem.repository.BranchRepository;
 import com.wethinkcode.hrsystem.repository.UserRepository;
 import com.wethinkcode.hrsystem.security.CurrentUserService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -24,7 +23,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -51,23 +52,28 @@ public class AnnouncementService {
     public Announcement create(AnnouncementRequest request, MultipartFile poster) {
         User postedBy = currentUserService.getCurrentUser();
         String role = postedBy.getRole();
+        List<Long> requestedIds = request.getBranchIds() == null
+                ? List.of()
+                : request.getBranchIds().stream().distinct().toList();
 
-        Branch targetBranch = null;
+        Set<Branch> targetBranches = new HashSet<>();
 
         if (role.equals("MANAGER")) {
             Employee employee = postedBy.getEmployee();
             if (employee == null || employee.getBranch() == null) {
                 throw new AccessDeniedException("Manager is not assigned to a branch");
             }
-            if (request.getBranchId() == null
-                    || !request.getBranchId().equals(employee.getBranch().getId())) {
+            if (requestedIds.size() != 1 || !requestedIds.get(0).equals(employee.getBranch().getId())) {
                 throw new AccessDeniedException("Managers may only post announcements to their own branch");
             }
-            targetBranch = employee.getBranch();
+            targetBranches.add(employee.getBranch());
         } else if (role.equals("HR") || role.equals("ADMIN")) {
-            if (request.getBranchId() != null) {
-                targetBranch = branchRepository.findById(request.getBranchId())
-                        .orElseThrow(() -> new RuntimeException("Branch not found"));
+            if (!requestedIds.isEmpty()) {
+                List<Branch> found = branchRepository.findAllById(requestedIds);
+                if (found.size() != requestedIds.size()) {
+                    throw new RuntimeException("Branch not found");
+                }
+                targetBranches.addAll(found);
             }
         } else {
             throw new AccessDeniedException("You are not authorized to post announcements");
@@ -80,7 +86,7 @@ public class AnnouncementService {
         announcement.setExpiryDate(request.getExpiryDate());
         announcement.setPostedDate(LocalDate.now());
         announcement.setPostedBy(postedBy);
-        announcement.setBranch(targetBranch);
+        announcement.setBranches(targetBranches);
 
         if (poster != null && !poster.isEmpty()) {
             announcement.setPosterImagePath(saveFile(poster));
@@ -89,8 +95,23 @@ public class AnnouncementService {
         return announcementRepository.save(announcement);
     }
 
-    public List<Announcement> getActive() {
-        return announcementRepository.findActive(LocalDate.now());
+    private boolean isVisibleTo(Announcement announcement, boolean hrOrAdmin, Long branchId) {
+        if (hrOrAdmin) {
+            return true;
+        }
+        if (announcement.getBranches() == null || announcement.getBranches().isEmpty()) {
+            return true;
+        }
+        return branchId != null
+                && announcement.getBranches().stream().anyMatch(b -> branchId.equals(b.getId()));
+    }
+
+    public List<Announcement> getActiveForViewer() {
+        boolean hrOrAdmin = currentUserService.isHrOrAdmin();
+        Long branchId = hrOrAdmin ? null : currentUserService.getCurrentBranchId();
+        return announcementRepository.findActive(LocalDate.now()).stream()
+                .filter(a -> isVisibleTo(a, hrOrAdmin, branchId))
+                .toList();
     }
 
     public List<Announcement> getAll() {
@@ -102,6 +123,17 @@ public class AnnouncementService {
                 .orElseThrow(() -> new RuntimeException("Announcement not found"));
     }
 
+    public Announcement getByIdForViewer(Long id) {
+        Announcement announcement = getById(id);
+        boolean hrOrAdmin = currentUserService.isHrOrAdmin();
+        Long branchId = hrOrAdmin ? null : currentUserService.getCurrentBranchId();
+        if (!isVisibleTo(announcement, hrOrAdmin, branchId)) {
+            // Deliberately indistinguishable from a missing announcement.
+            throw new RuntimeException("Announcement not found");
+        }
+        return announcement;
+    }
+
     public void delete(Long id) {
         Announcement announcement = getById(id);
         User currentUser = currentUserService.getCurrentUser();
@@ -110,10 +142,13 @@ public class AnnouncementService {
         if (role.equals("MANAGER")) {
             Employee employee = currentUser.getEmployee();
             Branch managerBranch = (employee != null) ? employee.getBranch() : null;
-            if (managerBranch == null
-                    || announcement.getBranch() == null
-                    || !announcement.getBranch().getId().equals(managerBranch.getId())) {
-                throw new AccessDeniedException("Managers may only delete announcements for their own branch");
+            Set<Branch> targets = announcement.getBranches();
+            boolean onlyOwnBranch = managerBranch != null
+                    && targets != null
+                    && targets.size() == 1
+                    && targets.iterator().next().getId().equals(managerBranch.getId());
+            if (!onlyOwnBranch) {
+                throw new AccessDeniedException("Managers may only delete announcements posted only to their own branch");
             }
         } else if (!role.equals("HR") && !role.equals("ADMIN")) {
             throw new AccessDeniedException("You are not authorized to delete announcements");
@@ -123,7 +158,7 @@ public class AnnouncementService {
     }
 
     public Resource getPoster(Long id) {
-        Announcement announcement = getById(id);
+        Announcement announcement = getByIdForViewer(id);
         if (announcement.getPosterImagePath() == null) {
             throw new RuntimeException("No poster image for this announcement");
         }

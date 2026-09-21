@@ -21,19 +21,19 @@ public class AnnouncementController {
         this.announcementService = announcementService;
     }
 
-    // PUBLIC - no login required, shown on landing page carousel
+    // Login required - active announcements for everyone, plus the caller's branch (HR/Admin see all)
     @GetMapping
     public ResponseEntity<List<AnnouncementResponse>> getActive() {
-        return ResponseEntity.ok(announcementService.getActive().stream().map(AnnouncementResponse::from).toList());
+        return ResponseEntity.ok(announcementService.getActiveForViewer().stream().map(AnnouncementResponse::from).toList());
     }
 
-    // PUBLIC - full detail view when someone clicks a slide
+    // Login required - only announcements visible to the caller
     @GetMapping("/{id}")
     public ResponseEntity<AnnouncementResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(AnnouncementResponse.from(announcementService.getById(id)));
+        return ResponseEntity.ok(AnnouncementResponse.from(announcementService.getByIdForViewer(id)));
     }
 
-    // PUBLIC - serves the poster image file
+    // Login required - serves the poster image file (same visibility as the announcement)
     @GetMapping("/{id}/poster")
     public ResponseEntity<Resource> getPoster(@PathVariable Long id) {
         Resource poster = announcementService.getPoster(id);
@@ -47,7 +47,7 @@ public class AnnouncementController {
         return ResponseEntity.ok(announcementService.getAll().stream().map(AnnouncementResponse::from).toList());
     }
 
-    // PROTECTED - HR/Admin post anywhere (or all branches); Manager posts to their own branch only (enforced in service)
+    // PROTECTED - HR/Admin post to any branches or everyone; Manager posts to their own branch only (enforced in service)
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN') or hasRole('MANAGER')")
     @PostMapping(consumes = "multipart/form-data")
     public ResponseEntity<AnnouncementResponse> create(
@@ -55,14 +55,14 @@ public class AnnouncementController {
             @RequestParam String content,
             @RequestParam String category,
             @RequestParam(required = false) String expiryDate,
-            @RequestParam(required = false) Long branchId,
+            @RequestParam(required = false) List<Long> branchIds,
             @RequestParam(required = false) MultipartFile poster) {
 
         AnnouncementRequest request = new AnnouncementRequest();
         request.setTitle(title);
         request.setContent(content);
         request.setCategory(category);
-        request.setBranchId(branchId);
+        request.setBranchIds(branchIds);
         if (expiryDate != null && !expiryDate.isBlank()) {
             request.setExpiryDate(java.time.LocalDate.parse(expiryDate));
         }
@@ -70,7 +70,7 @@ public class AnnouncementController {
         return ResponseEntity.ok(AnnouncementResponse.from(announcementService.create(request, poster)));
     }
 
-    // PROTECTED - HR/Admin delete anything; Manager deletes their own branch's announcements only (enforced in service)
+    // PROTECTED - HR/Admin delete anything; Manager deletes only announcements posted solely to their own branch (enforced in service)
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN') or hasRole('MANAGER')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {

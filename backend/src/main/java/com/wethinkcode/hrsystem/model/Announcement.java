@@ -3,6 +3,8 @@ package com.wethinkcode.hrsystem.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "announcements")
@@ -29,7 +31,9 @@ public class Announcement {
     @JoinColumn(name = "posted_by")
     private User postedBy;
 
-    @ManyToOne
-    @JoinColumn(name = "branch_id")
-    private Branch branch;   // null = visible to all branches
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(name = "announcement_branches",
+            joinColumns = @JoinColumn(name = "announcement_id"),
+            inverseJoinColumns = @JoinColumn(name = "branch_id"))
+    private Set<Branch> branches = new HashSet<>();   // empty = visible to everyone
 }
