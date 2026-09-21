@@ -6,27 +6,52 @@ import com.wethinkcode.hrsystem.dto.RegisterRequest;
 import com.wethinkcode.hrsystem.dto.ResetPasswordRequest;
 import com.wethinkcode.hrsystem.model.User;
 import com.wethinkcode.hrsystem.repository.UserRepository;
+import com.wethinkcode.hrsystem.security.CurrentUserService;
 import com.wethinkcode.hrsystem.security.JwtUtil;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 public class AuthService {
 
+    private static final Set<String> VALID_ROLES = Set.of("EMPLOYEE", "MANAGER", "HR", "ADMIN");
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final CurrentUserService currentUserService;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil,
+                       CurrentUserService currentUserService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.currentUserService = currentUserService;
     }
 
     public User register(RegisterRequest request) {
+        if (request.getUsername() == null || request.getUsername().isBlank()) {
+            throw new RuntimeException("Username is required");
+        }
+        if (request.getPassword() == null || request.getPassword().isBlank()) {
+            throw new RuntimeException("Password is required");
+        }
+        if (request.getRole() == null || !VALID_ROLES.contains(request.getRole())) {
+            throw new RuntimeException("Invalid role: " + request.getRole());
+        }
+        if ("ADMIN".equals(request.getRole())
+                && !"ADMIN".equals(currentUserService.getCurrentUser().getRole())) {
+            throw new AccessDeniedException("Only Admin can create Admin accounts");
+        }
+        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+            throw new RuntimeException("Username is already taken");
+        }
+
         User user = new User();
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
