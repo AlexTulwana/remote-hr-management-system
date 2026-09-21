@@ -35,6 +35,7 @@ function navItemsFor(role) {
     items.push({ to: '/manager/leave-approvals', label: 'Leave Approvals' });
     items.push({ to: '/manager/team-requests', label: 'Team Requests' });
     items.push({ to: '/manager/disciplinary-cases', label: 'Disciplinary Cases' });
+    items.push({ to: '/manager/performance-reviews', label: 'Performance Reviews' });
     items.push({ to: '/manager/my-requests', label: 'My Requests' });
   }
   items.push(
