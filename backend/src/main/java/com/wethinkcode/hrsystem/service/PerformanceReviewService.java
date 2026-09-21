@@ -53,14 +53,75 @@ public class PerformanceReviewService {
         return reviewRepository.save(review);
     }
 
-    public List<PerformanceReview> getByEmployee(Long employeeId) {
-        String role = currentUserService.getCurrentUser().getRole();
-        if (!role.equals("HR") && !role.equals("ADMIN")) {
-            if (!currentUserService.isSelf(employeeId)) {
-                throw new AccessDeniedException("You are not authorized to view these performance reviews");
+    public PerformanceReview create(PerformanceReviewRequest request, String username) {
+        User reviewer = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        Employee employee = employeeRepository.findById(request.getEmployeeId())
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
+
+        if (reviewer.getEmployee() != null && reviewer.getEmployee().getId() != null
+                && reviewer.getEmployee().getId().equals(employee.getId())) {
+            throw new AccessDeniedException("You cannot review yourself");
+        }
+
+        if ("MANAGER".equals(reviewer.getRole())) {
+            Long managerBranchId = reviewer.getEmployee() != null && reviewer.getEmployee().getBranch() != null
+                    ? reviewer.getEmployee().getBranch().getId() : null;
+            Long employeeBranchId = employee.getBranch() != null ? employee.getBranch().getId() : null;
+            if (managerBranchId == null || !managerBranchId.equals(employeeBranchId)) {
+                throw new AccessDeniedException("Managers can only review employees in their own branch");
             }
         }
-        return reviewRepository.findByEmployeeId(employeeId);
+
+        requireValidScore(request.getCommunicationScore());
+        requireValidScore(request.getTeamworkScore());
+        requireValidScore(request.getProductivityScore());
+        requireValidScore(request.getAttendanceScore());
+
+        PerformanceReview review = new PerformanceReview();
+        review.setEmployee(employee);
+        review.setReviewer(reviewer);
+        review.setCommunicationScore(request.getCommunicationScore());
+        review.setTeamworkScore(request.getTeamworkScore());
+        review.setProductivityScore(request.getProductivityScore());
+        review.setAttendanceScore(request.getAttendanceScore());
+        review.setComment(request.getComment());
+        review.setReviewDate(LocalDate.now());
+
+        return reviewRepository.save(review);
+    }
+
+    private void requireValidScore(int score) {
+        if (score < 1 || score > 5) {
+            throw new RuntimeException("Scores must be between 1 and 5");
+        }
+    }
+
+    public List<PerformanceReview> getByEmployee(Long employeeId) {
+        String role = currentUserService.getCurrentUser().getRole();
+        if ("HR".equals(role) || "ADMIN".equals(role) || currentUserService.isSelf(employeeId)) {
+            return reviewRepository.findByEmployeeId(employeeId);
+        }
+        if ("MANAGER".equals(role)) {
+            Employee target = employeeRepository.findById(employeeId)
+                    .orElseThrow(() -> new RuntimeException("Employee not found"));
+            Long managerBranchId = currentUserService.getCurrentBranchId();
+            Long targetBranchId = target.getBranch() != null ? target.getBranch().getId() : null;
+            if (managerBranchId != null && managerBranchId.equals(targetBranchId)) {
+                return reviewRepository.findByEmployeeId(employeeId);
+            }
+        }
+        throw new AccessDeniedException("You are not authorized to view these performance reviews");
+    }
+
+    public List<PerformanceReview> getByBranch(Long branchId) {
+        if (!currentUserService.isHrOrAdmin()) {
+            Long callerBranchId = currentUserService.getCurrentBranchId();
+            if (callerBranchId == null || !callerBranchId.equals(branchId)) {
+                throw new AccessDeniedException("You can only view reviews for your own branch");
+            }
+        }
+        return reviewRepository.findByEmployeeBranchId(branchId);
     }
 
     public List<PerformanceReview> getAll() {
