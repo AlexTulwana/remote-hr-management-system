@@ -65,7 +65,9 @@ export default function Announcements() {
               <p className="text-[13px] text-text-secondary mb-2.5">{a.content}</p>
               <p className="text-[11px] text-text-muted">
                 Posted by {a.postedByName} · {formatDate(a.postedDate)}
-                {a.branchName ? ` · ${a.branchName}` : ' · All branches'}
+                {a.branches && a.branches.length > 0
+                  ? ` · ${a.branches.map((b) => b.name).join(', ')}`
+                  : ' · Everyone'}
               </p>
             </Card>
           ))}
