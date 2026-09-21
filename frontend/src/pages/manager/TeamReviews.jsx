@@ -254,7 +254,9 @@ export default function TeamReviews() {
                     Reviewed by {r.reviewerName || 'unknown'} on {formatDate(r.reviewDate)}
                   </p>
                 </div>
-                <Pill variant={averageVariant(r.averageScore)}>{r.averageScore.toFixed(1)} / 5</Pill>
+                <div className="shrink-0 whitespace-nowrap">
+                  <Pill variant={averageVariant(r.averageScore)}>{r.averageScore.toFixed(1)} / 5</Pill>
+                </div>
               </div>
             ))}
           </div>
