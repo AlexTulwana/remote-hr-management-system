@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getActiveAnnouncements } from '../api/announcements';
 import Card from '../components/Card';
 import Pill from '../components/Pill';
+import PosterImage from '../components/PosterImage';
 import SkeletonCard from '../components/SkeletonCard';
 import EmptyState from '../components/EmptyState';
 import ErrorInline from '../components/ErrorInline';
@@ -52,9 +53,8 @@ export default function Announcements() {
           {announcements.map((a) => (
             <Card key={a.id}>
               {a.hasPoster ? (
-                <img
-                  src={`http://localhost:8080/api/announcements/${a.id}/poster`}
-                  alt=""
+                <PosterImage
+                  announcementId={a.id}
                   className="w-full rounded-lg mb-3 max-h-64 object-cover"
                 />
               ) : null}
