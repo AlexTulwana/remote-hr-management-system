@@ -1,6 +1,10 @@
 package com.wethinkcode.hrsystem.integration;
 
+import com.wethinkcode.hrsystem.model.User;
+import com.wethinkcode.hrsystem.repository.UserRepository;
 import org.junit.jupiter.api.BeforeAll;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
@@ -47,6 +51,21 @@ public abstract class IntegrationTestBase {
         registry.add("spring.rabbitmq.password", RABBITMQ::getAdminPassword);
 
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "update");
+    }
+
+    @Autowired
+    protected UserRepository userRepository;
+
+    @Autowired
+    protected PasswordEncoder passwordEncoder;
+
+    // Account creation over HTTP now needs an HR/Admin login, so tests seed users directly.
+    protected User createUser(String username, String password, String role) {
+        User user = new User();
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setRole(role);
+        return userRepository.save(user);
     }
 
     @LocalServerPort
