@@ -34,25 +34,6 @@ public class PerformanceReviewService {
         this.currentUserService = currentUserService;
     }
 
-    public PerformanceReview create(PerformanceReviewRequest request) {
-        Employee employee = employeeRepository.findById(request.getEmployeeId())
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
-        User reviewer = userRepository.findById(request.getReviewerId())
-                .orElseThrow(() -> new RuntimeException("Reviewer not found"));
-
-        PerformanceReview review = new PerformanceReview();
-        review.setEmployee(employee);
-        review.setReviewer(reviewer);
-        review.setCommunicationScore(request.getCommunicationScore());
-        review.setTeamworkScore(request.getTeamworkScore());
-        review.setProductivityScore(request.getProductivityScore());
-        review.setAttendanceScore(request.getAttendanceScore());
-        review.setComment(request.getComment());
-        review.setReviewDate(LocalDate.now());
-
-        return reviewRepository.save(review);
-    }
-
     public PerformanceReview create(PerformanceReviewRequest request, String username) {
         User reviewer = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
