@@ -6,6 +6,7 @@ import com.wethinkcode.hrsystem.dto.RegisterRequest;
 import com.wethinkcode.hrsystem.dto.ResetPasswordRequest;
 import com.wethinkcode.hrsystem.model.User;
 import com.wethinkcode.hrsystem.repository.UserRepository;
+import com.wethinkcode.hrsystem.security.CurrentUserService;
 import com.wethinkcode.hrsystem.security.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
@@ -34,6 +36,9 @@ class AuthServiceTest {
 
     @Mock
     private JwtUtil jwtUtil;
+
+    @Mock
+    private CurrentUserService currentUserService;
 
     @InjectMocks
     private AuthService authService;
@@ -198,5 +203,96 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.resetPassword(request))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Invalid or expired reset token");
+    }
+
+    // --- register rules ---
+
+    private RegisterRequest registerRequest(String username, String password, String role) {
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername(username);
+        request.setPassword(password);
+        request.setRole(role);
+        return request;
+    }
+
+    @Test
+    void register_invalidRole_throwsAndDoesNotSave() {
+        assertThatThrownBy(() -> authService.register(registerRequest("newuser", "pw12345678", "SUPERUSER")))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Invalid role: SUPERUSER");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void register_nullRole_throwsAndDoesNotSave() {
+        assertThatThrownBy(() -> authService.register(registerRequest("newuser", "pw12345678", null)))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Invalid role: null");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void register_blankUsername_throwsAndDoesNotSave() {
+        assertThatThrownBy(() -> authService.register(registerRequest("  ", "pw12345678", "EMPLOYEE")))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Username is required");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void register_blankPassword_throwsAndDoesNotSave() {
+        assertThatThrownBy(() -> authService.register(registerRequest("newuser", "", "EMPLOYEE")))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Password is required");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void register_duplicateUsername_throwsAndDoesNotSave() {
+        when(userRepository.findByUsername("taken")).thenReturn(Optional.of(existingUser));
+
+        assertThatThrownBy(() -> authService.register(registerRequest("taken", "pw12345678", "EMPLOYEE")))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Username is already taken");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void register_adminRequestedByHr_throwsAccessDenied() {
+        when(currentUserService.getCurrentUser()).thenReturn(existingUser); // role HR
+
+        assertThatThrownBy(() -> authService.register(registerRequest("newadmin", "pw12345678", "ADMIN")))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessage("Only Admin can create Admin accounts");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void register_adminRequestedByAdmin_succeeds() {
+        User admin = new User();
+        admin.setRole("ADMIN");
+        when(currentUserService.getCurrentUser()).thenReturn(admin);
+        when(passwordEncoder.encode("pw12345678")).thenReturn("encoded-password");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        User result = authService.register(registerRequest("newadmin", "pw12345678", "ADMIN"));
+
+        assertThat(result.getRole()).isEqualTo("ADMIN");
+    }
+
+    @Test
+    void register_nonAdminRole_doesNotNeedCurrentUser() {
+        when(passwordEncoder.encode("pw12345678")).thenReturn("encoded-password");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        authService.register(registerRequest("newhr", "pw12345678", "HR"));
+
+        verify(currentUserService, never()).getCurrentUser();
     }
 }
