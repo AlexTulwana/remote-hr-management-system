@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -83,6 +84,13 @@ class AnnouncementServiceTest {
         return employee;
     }
 
+    private Announcement announcementFor(Long id, Branch... branches) {
+        Announcement announcement = new Announcement();
+        announcement.setId(id);
+        announcement.setBranches(Set.of(branches));
+        return announcement;
+    }
+
     // ---- create() ----
 
     @Test
@@ -90,13 +98,13 @@ class AnnouncementServiceTest {
         User manager = userWithRole("MANAGER");
         manager.setEmployee(employeeWithBranch(branch1));
         when(currentUserService.getCurrentUser()).thenReturn(manager);
-        request.setBranchId(1L);
+        request.setBranchIds(List.of(1L));
         when(announcementRepository.save(any(Announcement.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         Announcement result = announcementService.create(request, null);
 
-        assertEquals(branch1, result.getBranch());
+        assertEquals(Set.of(branch1), result.getBranches());
         assertEquals(manager, result.getPostedBy());
         verify(announcementRepository).save(any(Announcement.class));
     }
@@ -106,18 +114,29 @@ class AnnouncementServiceTest {
         User manager = userWithRole("MANAGER");
         manager.setEmployee(employeeWithBranch(branch1));
         when(currentUserService.getCurrentUser()).thenReturn(manager);
-        request.setBranchId(2L);
+        request.setBranchIds(List.of(2L));
 
         assertThrows(AccessDeniedException.class, () -> announcementService.create(request, null));
         verify(announcementRepository, never()).save(any());
     }
 
     @Test
-    void create_managerNoBranchIdProvided_throwsAccessDenied() {
+    void create_managerSeveralBranches_throwsAccessDenied() {
         User manager = userWithRole("MANAGER");
         manager.setEmployee(employeeWithBranch(branch1));
         when(currentUserService.getCurrentUser()).thenReturn(manager);
-        // request.branchId left null - manager trying to go "global"
+        request.setBranchIds(List.of(1L, 2L));
+
+        assertThrows(AccessDeniedException.class, () -> announcementService.create(request, null));
+        verify(announcementRepository, never()).save(any());
+    }
+
+    @Test
+    void create_managerNoBranchIdsProvided_throwsAccessDenied() {
+        User manager = userWithRole("MANAGER");
+        manager.setEmployee(employeeWithBranch(branch1));
+        when(currentUserService.getCurrentUser()).thenReturn(manager);
+        // request.branchIds left null - manager trying to post to everyone
 
         assertThrows(AccessDeniedException.class, () -> announcementService.create(request, null));
         verify(announcementRepository, never()).save(any());
@@ -128,7 +147,7 @@ class AnnouncementServiceTest {
         User manager = userWithRole("MANAGER");
         manager.setEmployee(employeeWithBranch(null));
         when(currentUserService.getCurrentUser()).thenReturn(manager);
-        request.setBranchId(1L);
+        request.setBranchIds(List.of(1L));
 
         assertThrows(AccessDeniedException.class, () -> announcementService.create(request, null));
         verify(announcementRepository, never()).save(any());
@@ -139,7 +158,7 @@ class AnnouncementServiceTest {
         User manager = userWithRole("MANAGER");
         manager.setEmployee(null);
         when(currentUserService.getCurrentUser()).thenReturn(manager);
-        request.setBranchId(1L);
+        request.setBranchIds(List.of(1L));
 
         assertThrows(AccessDeniedException.class, () -> announcementService.create(request, null));
         verify(announcementRepository, never()).save(any());
@@ -149,40 +168,68 @@ class AnnouncementServiceTest {
     void create_hrWithSpecificBranch_succeeds() {
         User hr = userWithRole("HR");
         when(currentUserService.getCurrentUser()).thenReturn(hr);
-        request.setBranchId(2L);
-        when(branchRepository.findById(2L)).thenReturn(Optional.of(branch2));
+        request.setBranchIds(List.of(2L));
+        when(branchRepository.findAllById(List.of(2L))).thenReturn(List.of(branch2));
         when(announcementRepository.save(any(Announcement.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         Announcement result = announcementService.create(request, null);
 
-        assertEquals(branch2, result.getBranch());
+        assertEquals(Set.of(branch2), result.getBranches());
+    }
+
+    @Test
+    void create_hrWithSeveralBranches_succeeds() {
+        User hr = userWithRole("HR");
+        when(currentUserService.getCurrentUser()).thenReturn(hr);
+        request.setBranchIds(List.of(1L, 2L));
+        when(branchRepository.findAllById(List.of(1L, 2L))).thenReturn(List.of(branch1, branch2));
+        when(announcementRepository.save(any(Announcement.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Announcement result = announcementService.create(request, null);
+
+        assertEquals(Set.of(branch1, branch2), result.getBranches());
     }
 
     @Test
     void create_hrWithInvalidBranch_throwsRuntimeException() {
         User hr = userWithRole("HR");
         when(currentUserService.getCurrentUser()).thenReturn(hr);
-        request.setBranchId(99L);
-        when(branchRepository.findById(99L)).thenReturn(Optional.empty());
+        request.setBranchIds(List.of(99L));
+        when(branchRepository.findAllById(List.of(99L))).thenReturn(List.of());
 
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> announcementService.create(request, null));
         assertEquals("Branch not found", ex.getMessage());
+        verify(announcementRepository, never()).save(any());
     }
 
     @Test
-    void create_adminNoBranchId_postsGlobally() {
+    void create_hrWithOneInvalidBranchAmongValid_throwsRuntimeException() {
+        User hr = userWithRole("HR");
+        when(currentUserService.getCurrentUser()).thenReturn(hr);
+        request.setBranchIds(List.of(1L, 99L));
+        when(branchRepository.findAllById(List.of(1L, 99L))).thenReturn(List.of(branch1));
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> announcementService.create(request, null));
+        assertEquals("Branch not found", ex.getMessage());
+        verify(announcementRepository, never()).save(any());
+    }
+
+    @Test
+    void create_adminNoBranchIds_postsToEveryone() {
         User admin = userWithRole("ADMIN");
         when(currentUserService.getCurrentUser()).thenReturn(admin);
-        // request.branchId left null - global announcement
+        // request.branchIds left null - announcement for everyone
         when(announcementRepository.save(any(Announcement.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         Announcement result = announcementService.create(request, null);
 
-        assertNull(result.getBranch());
-        verify(branchRepository, never()).findById(any());
+        assertTrue(result.getBranches().isEmpty());
+        verify(branchRepository, never()).findAllById(any());
     }
 
     @Test
@@ -210,16 +257,47 @@ class AnnouncementServiceTest {
         assertTrue(Files.exists(Path.of(result.getPosterImagePath())));
     }
 
-    // ---- getActive() / getAll() / getById() ----
+    // ---- getActiveForViewer() ----
 
     @Test
-    void getActive_returnsActiveAnnouncements() {
-        when(announcementRepository.findActive(any())).thenReturn(List.of(new Announcement()));
+    void getActiveForViewer_hr_seesEverything() {
+        when(currentUserService.isHrOrAdmin()).thenReturn(true);
+        when(announcementRepository.findActive(any())).thenReturn(List.of(
+                announcementFor(1L), announcementFor(2L, branch1), announcementFor(3L, branch2)));
 
-        List<Announcement> result = announcementService.getActive();
-
-        assertEquals(1, result.size());
+        assertEquals(3, announcementService.getActiveForViewer().size());
     }
+
+    @Test
+    void getActiveForViewer_employee_seesEveryoneAndOwnBranchOnly() {
+        when(currentUserService.isHrOrAdmin()).thenReturn(false);
+        when(currentUserService.getCurrentBranchId()).thenReturn(1L);
+        when(announcementRepository.findActive(any())).thenReturn(List.of(
+                announcementFor(1L),
+                announcementFor(2L, branch1),
+                announcementFor(3L, branch2),
+                announcementFor(4L, branch1, branch2)));
+
+        List<Long> visibleIds = announcementService.getActiveForViewer().stream()
+                .map(Announcement::getId).toList();
+
+        assertEquals(List.of(1L, 2L, 4L), visibleIds);
+    }
+
+    @Test
+    void getActiveForViewer_employeeWithNoBranch_seesOnlyEveryone() {
+        when(currentUserService.isHrOrAdmin()).thenReturn(false);
+        when(currentUserService.getCurrentBranchId()).thenReturn(null);
+        when(announcementRepository.findActive(any())).thenReturn(List.of(
+                announcementFor(1L), announcementFor(2L, branch1)));
+
+        List<Long> visibleIds = announcementService.getActiveForViewer().stream()
+                .map(Announcement::getId).toList();
+
+        assertEquals(List.of(1L), visibleIds);
+    }
+
+    // ---- getAll() / getById() / getByIdForViewer() ----
 
     @Test
     void getAll_returnsAllAnnouncements() {
@@ -250,14 +328,41 @@ class AnnouncementServiceTest {
         assertEquals("Announcement not found", ex.getMessage());
     }
 
+    @Test
+    void getByIdForViewer_ownBranch_returnsAnnouncement() {
+        Announcement announcement = announcementFor(5L, branch1);
+        when(announcementRepository.findById(5L)).thenReturn(Optional.of(announcement));
+        when(currentUserService.isHrOrAdmin()).thenReturn(false);
+        when(currentUserService.getCurrentBranchId()).thenReturn(1L);
+
+        assertEquals(announcement, announcementService.getByIdForViewer(5L));
+    }
+
+    @Test
+    void getByIdForViewer_otherBranch_isTreatedAsNotFound() {
+        when(announcementRepository.findById(5L)).thenReturn(Optional.of(announcementFor(5L, branch2)));
+        when(currentUserService.isHrOrAdmin()).thenReturn(false);
+        when(currentUserService.getCurrentBranchId()).thenReturn(1L);
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> announcementService.getByIdForViewer(5L));
+        assertEquals("Announcement not found", ex.getMessage());
+    }
+
+    @Test
+    void getByIdForViewer_hr_seesAnyBranch() {
+        Announcement announcement = announcementFor(5L, branch2);
+        when(announcementRepository.findById(5L)).thenReturn(Optional.of(announcement));
+        when(currentUserService.isHrOrAdmin()).thenReturn(true);
+
+        assertEquals(announcement, announcementService.getByIdForViewer(5L));
+    }
+
     // ---- delete() ----
 
     @Test
-    void delete_managerOwnBranchAnnouncement_succeeds() {
-        Announcement announcement = new Announcement();
-        announcement.setId(5L);
-        announcement.setBranch(branch1);
-        when(announcementRepository.findById(5L)).thenReturn(Optional.of(announcement));
+    void delete_managerOwnBranchOnlyAnnouncement_succeeds() {
+        when(announcementRepository.findById(5L)).thenReturn(Optional.of(announcementFor(5L, branch1)));
 
         User manager = userWithRole("MANAGER");
         manager.setEmployee(employeeWithBranch(branch1));
@@ -270,10 +375,7 @@ class AnnouncementServiceTest {
 
     @Test
     void delete_managerOtherBranchAnnouncement_throwsAccessDenied() {
-        Announcement announcement = new Announcement();
-        announcement.setId(5L);
-        announcement.setBranch(branch2);
-        when(announcementRepository.findById(5L)).thenReturn(Optional.of(announcement));
+        when(announcementRepository.findById(5L)).thenReturn(Optional.of(announcementFor(5L, branch2)));
 
         User manager = userWithRole("MANAGER");
         manager.setEmployee(employeeWithBranch(branch1));
@@ -284,11 +386,8 @@ class AnnouncementServiceTest {
     }
 
     @Test
-    void delete_managerGlobalAnnouncement_throwsAccessDenied() {
-        Announcement announcement = new Announcement();
-        announcement.setId(5L);
-        announcement.setBranch(null);
-        when(announcementRepository.findById(5L)).thenReturn(Optional.of(announcement));
+    void delete_managerEveryoneAnnouncement_throwsAccessDenied() {
+        when(announcementRepository.findById(5L)).thenReturn(Optional.of(announcementFor(5L)));
 
         User manager = userWithRole("MANAGER");
         manager.setEmployee(employeeWithBranch(branch1));
@@ -299,11 +398,20 @@ class AnnouncementServiceTest {
     }
 
     @Test
-    void delete_hrDeletesGlobalAnnouncement_succeeds() {
-        Announcement announcement = new Announcement();
-        announcement.setId(5L);
-        announcement.setBranch(null);
-        when(announcementRepository.findById(5L)).thenReturn(Optional.of(announcement));
+    void delete_managerMultiBranchAnnouncementIncludingOwn_throwsAccessDenied() {
+        when(announcementRepository.findById(5L)).thenReturn(Optional.of(announcementFor(5L, branch1, branch2)));
+
+        User manager = userWithRole("MANAGER");
+        manager.setEmployee(employeeWithBranch(branch1));
+        when(currentUserService.getCurrentUser()).thenReturn(manager);
+
+        assertThrows(AccessDeniedException.class, () -> announcementService.delete(5L));
+        verify(announcementRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void delete_hrDeletesEveryoneAnnouncement_succeeds() {
+        when(announcementRepository.findById(5L)).thenReturn(Optional.of(announcementFor(5L)));
 
         User hr = userWithRole("HR");
         when(currentUserService.getCurrentUser()).thenReturn(hr);
@@ -315,9 +423,7 @@ class AnnouncementServiceTest {
 
     @Test
     void delete_employeeRole_throwsAccessDenied() {
-        Announcement announcement = new Announcement();
-        announcement.setId(5L);
-        when(announcementRepository.findById(5L)).thenReturn(Optional.of(announcement));
+        when(announcementRepository.findById(5L)).thenReturn(Optional.of(announcementFor(5L)));
 
         User employee = userWithRole("EMPLOYEE");
         when(currentUserService.getCurrentUser()).thenReturn(employee);
@@ -377,5 +483,16 @@ class AnnouncementServiceTest {
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> announcementService.getPoster(5L));
         assertEquals("Poster file not found on disk", ex.getMessage());
+    }
+
+    @Test
+    void getPoster_announcementForOtherBranch_isTreatedAsNotFound() {
+        when(announcementRepository.findById(5L)).thenReturn(Optional.of(announcementFor(5L, branch2)));
+        when(currentUserService.isHrOrAdmin()).thenReturn(false);
+        when(currentUserService.getCurrentBranchId()).thenReturn(1L);
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> announcementService.getPoster(5L));
+        assertEquals("Announcement not found", ex.getMessage());
     }
 }
