@@ -53,7 +53,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/login", "/api/auth/forgot-password",
+                                "/api/auth/reset-password", "/api/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/announcements", "/api/announcements/{id}", "/api/announcements/{id}/poster").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/applications/{jobPostingId}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/job-postings", "/api/job-postings/{id}").permitAll()

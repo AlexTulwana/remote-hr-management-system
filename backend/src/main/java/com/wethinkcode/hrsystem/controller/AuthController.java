@@ -7,6 +7,7 @@ import com.wethinkcode.hrsystem.dto.ResetPasswordRequest;
 import com.wethinkcode.hrsystem.model.User;
 import com.wethinkcode.hrsystem.service.AuthService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -21,6 +22,7 @@ public class AuthController {
         this.authService = authService;
     }
 
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PostMapping("/register")
     public ResponseEntity<User> register(@RequestBody RegisterRequest request) {
         return ResponseEntity.ok(authService.register(request));

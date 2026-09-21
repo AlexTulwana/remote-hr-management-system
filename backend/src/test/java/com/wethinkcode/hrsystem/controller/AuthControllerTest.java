@@ -14,9 +14,12 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -39,6 +42,7 @@ class AuthControllerTest {
     private JwtUtil jwtUtil;
 
     @Test
+    @WithMockUser(roles = "HR")
     void register_returnsCreatedUser() throws Exception {
         RegisterRequest request = new RegisterRequest();
         request.setUsername("newuser");
@@ -110,5 +114,59 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/auth/logout"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Logged out successfully"));
+    }
+
+    // ---- register access ----
+
+    private String registerBody() throws Exception {
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername("newuser");
+        request.setPassword("Password123!");
+        request.setRole("EMPLOYEE");
+        return objectMapper.writeValueAsString(request);
+    }
+
+    @Test
+    void register_unauthenticated_isRejected() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerBody()))
+                .andExpect(status().isForbidden());
+
+        verify(authService, never()).register(any(RegisterRequest.class));
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void register_employeeRole_isForbidden() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerBody()))
+                .andExpect(status().isForbidden());
+
+        verify(authService, never()).register(any(RegisterRequest.class));
+    }
+
+    @Test
+    @WithMockUser(roles = "MANAGER")
+    void register_managerRole_isForbidden() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerBody()))
+                .andExpect(status().isForbidden());
+
+        verify(authService, never()).register(any(RegisterRequest.class));
+    }
+
+    @Test
+    @WithMockUser(roles = "HR")
+    void register_deniedByService_returnsForbidden() throws Exception {
+        when(authService.register(any(RegisterRequest.class)))
+                .thenThrow(new AccessDeniedException("Only Admin can create Admin accounts"));
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerBody()))
+                .andExpect(status().isForbidden());
     }
 }
