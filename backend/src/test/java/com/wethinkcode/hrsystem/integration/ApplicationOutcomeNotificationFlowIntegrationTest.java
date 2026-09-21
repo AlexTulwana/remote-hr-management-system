@@ -1,7 +1,6 @@
 package com.wethinkcode.hrsystem.integration;
 
 import com.wethinkcode.hrsystem.dto.LoginRequest;
-import com.wethinkcode.hrsystem.dto.RegisterRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,13 +67,7 @@ class ApplicationOutcomeNotificationFlowIntegrationTest extends IntegrationTestB
     private record RegisteredUser(String token, Long id) {}
 
     private RegisteredUser registerAndLoginHr(String username) {
-        RegisterRequest register = new RegisterRequest();
-        register.setUsername(username);
-        register.setPassword("TestPass123!");
-        register.setRole("HR");
-        ResponseEntity<Map> registerResponse =
-                restTemplate.postForEntity(baseUrl() + "/api/auth/register", register, Map.class);
-        Long userId = Long.valueOf(registerResponse.getBody().get("id").toString());
+        Long userId = createUser(username, "TestPass123!", "HR").getId();
 
         LoginRequest login = new LoginRequest();
         login.setUsername(username);
