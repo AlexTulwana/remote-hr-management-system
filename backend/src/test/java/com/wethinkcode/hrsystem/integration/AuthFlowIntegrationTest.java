@@ -3,8 +3,8 @@ package com.wethinkcode.hrsystem.integration;
 import com.wethinkcode.hrsystem.dto.LoginRequest;
 import com.wethinkcode.hrsystem.dto.RegisterRequest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -21,31 +21,39 @@ class AuthFlowIntegrationTest extends IntegrationTestBase {
     @Autowired
     private TestRestTemplate restTemplate;
 
-    @Test
-    void registerLoginAndAccessProtectedEndpoint_succeedsForHrRole() {
-        RegisterRequest register = new RegisterRequest();
-        register.setUsername("it-hr-user");
-        register.setPassword("TestPass123!");
-        register.setRole("HR");
-
-        ResponseEntity<Map> registerResponse =
-                restTemplate.postForEntity(baseUrl() + "/api/auth/register", register, Map.class);
-        assertThat(registerResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-
+    private String loginAndGetToken(String username) {
         LoginRequest login = new LoginRequest();
-        login.setUsername("it-hr-user");
+        login.setUsername(username);
         login.setPassword("TestPass123!");
-
         ResponseEntity<Map> loginResponse =
                 restTemplate.postForEntity(baseUrl() + "/api/auth/login", login, Map.class);
         assertThat(loginResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        String token = (String) loginResponse.getBody().get("token");
-        assertThat(token).isNotBlank();
+        return (String) loginResponse.getBody().get("token");
+    }
 
+    private HttpHeaders bearer(String token) {
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + token);
+        return headers;
+    }
+
+    private ResponseEntity<Map> register(String token, String username, String role) {
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername(username);
+        request.setPassword("TestPass123!");
+        request.setRole(role);
+        HttpHeaders headers = token == null ? new HttpHeaders() : bearer(token);
+        return restTemplate.exchange(baseUrl() + "/api/auth/register", HttpMethod.POST,
+                new HttpEntity<>(request, headers), Map.class);
+    }
+
+    @Test
+    void loginAndAccessProtectedEndpoint_succeedsForHrRole() {
+        createUser("it-hr-user", "TestPass123!", "HR");
+        String token = loginAndGetToken("it-hr-user");
+
         ResponseEntity<List> employeesResponse = restTemplate.exchange(
-                baseUrl() + "/api/employees", HttpMethod.GET, new HttpEntity<>(headers), List.class);
+                baseUrl() + "/api/employees", HttpMethod.GET, new HttpEntity<>(bearer(token)), List.class);
 
         assertThat(employeesResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
@@ -60,24 +68,63 @@ class AuthFlowIntegrationTest extends IntegrationTestBase {
 
     @Test
     void protectedEndpoint_rejectsWrongRole() {
-        RegisterRequest register = new RegisterRequest();
-        register.setUsername("it-employee-user");
-        register.setPassword("TestPass123!");
-        register.setRole("EMPLOYEE");
-        restTemplate.postForEntity(baseUrl() + "/api/auth/register", register, Map.class);
+        createUser("it-employee-user", "TestPass123!", "EMPLOYEE");
+        String token = loginAndGetToken("it-employee-user");
 
-        LoginRequest login = new LoginRequest();
-        login.setUsername("it-employee-user");
-        login.setPassword("TestPass123!");
-        ResponseEntity<Map> loginResponse =
-                restTemplate.postForEntity(baseUrl() + "/api/auth/login", login, Map.class);
-        String token = (String) loginResponse.getBody().get("token");
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + token);
         ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl() + "/api/employees", HttpMethod.GET, new HttpEntity<>(headers), Map.class);
+                baseUrl() + "/api/employees", HttpMethod.GET, new HttpEntity<>(bearer(token)), Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void register_withoutToken_isRejectedAndCreatesNothing() {
+        ResponseEntity<Map> response = register(null, "it-anon-user", "ADMIN");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(userRepository.findByUsername("it-anon-user")).isEmpty();
+    }
+
+    @Test
+    void register_asEmployee_isRejected() {
+        createUser("it-employee-register", "TestPass123!", "EMPLOYEE");
+        String token = loginAndGetToken("it-employee-register");
+
+        ResponseEntity<Map> response = register(token, "it-employee-made", "EMPLOYEE");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(userRepository.findByUsername("it-employee-made")).isEmpty();
+    }
+
+    @Test
+    void register_asHr_createsEmployeeButNotAdmin() {
+        createUser("it-hr-register", "TestPass123!", "HR");
+        String token = loginAndGetToken("it-hr-register");
+
+        assertThat(register(token, "it-new-employee", "EMPLOYEE").getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(register(token, "it-new-admin-by-hr", "ADMIN").getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        assertThat(userRepository.findByUsername("it-new-employee")).isPresent();
+        assertThat(userRepository.findByUsername("it-new-admin-by-hr")).isEmpty();
+    }
+
+    @Test
+    void register_asAdmin_canCreateAdmin() {
+        createUser("it-admin-register", "TestPass123!", "ADMIN");
+        String token = loginAndGetToken("it-admin-register");
+
+        assertThat(register(token, "it-second-admin", "ADMIN").getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(userRepository.findByUsername("it-second-admin")).isPresent();
+    }
+
+    @Test
+    void register_withInvalidRole_isRejected() {
+        createUser("it-hr-invalid-role", "TestPass123!", "HR");
+        String token = loginAndGetToken("it-hr-invalid-role");
+
+        ResponseEntity<Map> response = register(token, "it-bad-role-user", "SUPERUSER");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(userRepository.findByUsername("it-bad-role-user")).isEmpty();
     }
 }
