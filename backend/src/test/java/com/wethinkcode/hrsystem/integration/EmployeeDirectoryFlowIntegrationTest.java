@@ -1,7 +1,6 @@
 package com.wethinkcode.hrsystem.integration;
 
 import com.wethinkcode.hrsystem.dto.LoginRequest;
-import com.wethinkcode.hrsystem.dto.RegisterRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,11 +59,7 @@ class EmployeeDirectoryFlowIntegrationTest extends IntegrationTestBase {
     }
 
     private HttpHeaders registerAndLoginHr(String username) {
-        RegisterRequest register = new RegisterRequest();
-        register.setUsername(username);
-        register.setPassword("TestPass123!");
-        register.setRole("HR");
-        restTemplate.postForEntity(baseUrl() + "/api/auth/register", register, Map.class);
+        createUser(username, "TestPass123!", "HR");
 
         LoginRequest login = new LoginRequest();
         login.setUsername(username);
