@@ -1,6 +1,7 @@
 package com.wethinkcode.hrsystem.controller;
 
 import com.wethinkcode.hrsystem.model.Announcement;
+import com.wethinkcode.hrsystem.model.Branch;
 import com.wethinkcode.hrsystem.security.JwtUtil;
 import com.wethinkcode.hrsystem.service.AnnouncementService;
 import org.junit.jupiter.api.Test;
@@ -15,13 +16,14 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AnnouncementController.class)
@@ -37,28 +39,69 @@ class AnnouncementControllerTest {
     @MockitoBean
     private JwtUtil jwtUtil;
 
-    // ---- PUBLIC endpoints: no auth required ----
+    // ---- reading requires login ----
 
     @Test
-    void getActive_noAuth_isPublic() throws Exception {
-        when(announcementService.getActive()).thenReturn(List.of(new Announcement()));
-
+    void getActive_noAuth_isRejected() throws Exception {
         mockMvc.perform(get("/api/announcements"))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden());
     }
 
     @Test
-    void getById_noAuth_isPublic() throws Exception {
+    void getById_noAuth_isRejected() throws Exception {
+        mockMvc.perform(get("/api/announcements/1"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getPoster_noAuth_isRejected() throws Exception {
+        mockMvc.perform(get("/api/announcements/1/poster"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void getActive_employee_returnsAnnouncementsWithBranchList() throws Exception {
+        Branch capeTown = new Branch();
+        capeTown.setId(1L);
+        capeTown.setName("Cape Town");
         Announcement announcement = new Announcement();
         announcement.setId(1L);
-        when(announcementService.getById(1L)).thenReturn(announcement);
+        announcement.setBranches(Set.of(capeTown));
+        when(announcementService.getActiveForViewer()).thenReturn(List.of(announcement));
+
+        mockMvc.perform(get("/api/announcements"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].branches[0].id").value(1))
+                .andExpect(jsonPath("$[0].branches[0].name").value("Cape Town"));
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void getActive_everyoneAnnouncement_hasEmptyBranchList() throws Exception {
+        Announcement announcement = new Announcement();
+        announcement.setId(2L);
+        when(announcementService.getActiveForViewer()).thenReturn(List.of(announcement));
+
+        mockMvc.perform(get("/api/announcements"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].branches.length()").value(0));
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void getById_employee_isAllowed() throws Exception {
+        Announcement announcement = new Announcement();
+        announcement.setId(1L);
+        when(announcementService.getByIdForViewer(1L)).thenReturn(announcement);
 
         mockMvc.perform(get("/api/announcements/1"))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void getPoster_noAuth_isPublic() throws Exception {
+    @WithMockUser(roles = "EMPLOYEE")
+    void getPoster_employee_isAllowed() throws Exception {
         Resource poster = new ByteArrayResource("fake-image-bytes".getBytes());
         when(announcementService.getPoster(1L)).thenReturn(poster);
 
@@ -71,7 +114,7 @@ class AnnouncementControllerTest {
     @Test
     void getAll_unauthenticated_isRejected() throws Exception {
         mockMvc.perform(get("/api/announcements/all"))
-                .andExpect(status().isForbidden());   // was isUnauthorized()
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -130,7 +173,23 @@ class AnnouncementControllerTest {
                         .param("title", "Branch meeting")
                         .param("content", "Body")
                         .param("category", "Staff Meeting")
-                        .param("branchId", "1")
+                        .param("branchIds", "1")
+                        .with(req -> { req.setMethod("POST"); return req; }))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "HR")
+    void create_hrWithSeveralBranches_isAllowed() throws Exception {
+        Announcement created = new Announcement();
+        created.setId(7L);
+        when(announcementService.create(any(), any())).thenReturn(created);
+
+        mockMvc.perform(multipart("/api/announcements")
+                        .param("title", "Two-branch notice")
+                        .param("content", "Body")
+                        .param("category", "Notice")
+                        .param("branchIds", "1", "2")
                         .with(req -> { req.setMethod("POST"); return req; }))
                 .andExpect(status().isOk());
     }
