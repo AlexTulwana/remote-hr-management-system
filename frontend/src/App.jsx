@@ -15,6 +15,7 @@ import MyTeam from './pages/manager/MyTeam';
 import LeaveApprovals from './pages/manager/LeaveApprovals';
 import TeamRequests from './pages/manager/TeamRequests';
 import TeamDisciplinary from './pages/manager/TeamDisciplinary';
+import TeamReviews from './pages/manager/TeamReviews';
 import AppLayout from './components/AppLayout';
 import ProtectedRoute from './auth/ProtectedRoute';
 import { useAuth } from './auth/AuthContext';
@@ -148,6 +149,16 @@ function App() {
           <ProtectedRoute allowedRoles={['MANAGER']}>
             <AppLayout navItems={navItems}>
               <TeamDisciplinary />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/manager/performance-reviews"
+        element={
+          <ProtectedRoute allowedRoles={['MANAGER']}>
+            <AppLayout navItems={navItems}>
+              <TeamReviews />
             </AppLayout>
           </ProtectedRoute>
         }
