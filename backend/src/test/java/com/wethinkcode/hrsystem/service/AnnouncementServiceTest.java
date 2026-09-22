@@ -20,6 +20,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -69,6 +70,7 @@ class AnnouncementServiceTest {
         request.setTitle("Office Closure");
         request.setContent("Office closed for a public holiday.");
         request.setCategory("Notice");
+        request.setExpiryDate(LocalDate.now().plusDays(7));
     }
 
     private User userWithRole(String role) {
@@ -92,6 +94,15 @@ class AnnouncementServiceTest {
     }
 
     // ---- create() ----
+
+    @Test
+    void create_noExpiryDate_throwsException() {
+        request.setExpiryDate(null);
+
+        assertThrows(RuntimeException.class, () -> announcementService.create(request, null));
+        verify(announcementRepository, never()).save(any());
+        verifyNoInteractions(currentUserService);
+    }
 
     @Test
     void create_managerOwnBranch_succeeds() {
