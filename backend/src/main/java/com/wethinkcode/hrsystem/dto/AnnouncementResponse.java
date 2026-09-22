@@ -15,7 +15,8 @@ public record AnnouncementResponse(
         LocalDate postedDate,
         LocalDate expiryDate,
         String postedByName,
-        List<BranchInfo> branches
+        List<BranchInfo> branches,
+        boolean canDelete
 ) {
     public record BranchInfo(Long id, String name) {}
 
@@ -25,7 +26,7 @@ public record AnnouncementResponse(
         return employee != null ? employee.getFullName() : a.getPostedBy().getUsername();
     }
 
-    public static AnnouncementResponse from(Announcement a) {
+    public static AnnouncementResponse from(Announcement a, boolean canDelete) {
         List<BranchInfo> branches = a.getBranches() == null ? List.of() : a.getBranches().stream()
                 .map(b -> new BranchInfo(b.getId(), b.getName()))
                 .sorted(Comparator.comparing(BranchInfo::name, Comparator.nullsFirst(Comparator.naturalOrder())))
@@ -39,7 +40,8 @@ public record AnnouncementResponse(
                 a.getPostedDate(),
                 a.getExpiryDate(),
                 posterNameOf(a),
-                branches
+                branches,
+                canDelete
         );
     }
 }
