@@ -1,5 +1,6 @@
 package com.wethinkcode.hrsystem.controller;
 
+import com.wethinkcode.hrsystem.dto.CalendarEventResponse;
 import com.wethinkcode.hrsystem.dto.CalendarItem;
 import com.wethinkcode.hrsystem.model.CalendarEvent;
 import com.wethinkcode.hrsystem.model.User;
@@ -44,10 +45,14 @@ public class CalendarController {
 
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN') or hasRole('MANAGER')")
     @PostMapping("/events")
-    public ResponseEntity<CalendarEvent> createEvent(@RequestBody CalendarEvent event,
+    public ResponseEntity<CalendarEventResponse> createEvent(@RequestBody CalendarEvent event,
                                                        Authentication authentication) {
         User currentUser = userRepository.findByUsername(authentication.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // A client-supplied id would make JPA save() overwrite an existing row (upsert)
+        // instead of creating a new one - always force a fresh insert here.
+        event.setId(null);
 
         // Managers can only create events for their own branch (or their own branch is required if set)
         if ("MANAGER".equals(currentUser.getRole())) {
@@ -59,12 +64,12 @@ public class CalendarController {
 
         event.setCreatedBy(currentUser);
         CalendarEvent saved = calendarEventRepository.save(event);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        return ResponseEntity.status(HttpStatus.CREATED).body(CalendarEventResponse.from(saved));
     }
 
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN') or hasRole('MANAGER')")
     @PutMapping("/events/{id}")
-    public ResponseEntity<CalendarEvent> updateEvent(@PathVariable Long id,
+    public ResponseEntity<CalendarEventResponse> updateEvent(@PathVariable Long id,
                                                        @RequestBody CalendarEvent updated,
                                                        Authentication authentication) {
         User currentUser = userRepository.findByUsername(authentication.getName())
@@ -92,7 +97,7 @@ public class CalendarController {
             existing.setBranch(updated.getBranch());
         }
 
-        return ResponseEntity.ok(calendarEventRepository.save(existing));
+        return ResponseEntity.ok(CalendarEventResponse.from(calendarEventRepository.save(existing)));
     }
 
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN') or hasRole('MANAGER')")
