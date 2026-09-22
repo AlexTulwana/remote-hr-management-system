@@ -14,6 +14,7 @@ const TYPE_META = {
   HEARING: { label: 'Hearing', variant: 'urgent' },
   JOB_POSTING_OPEN: { label: 'Job opens', variant: 'success' },
   JOB_POSTING_CLOSE: { label: 'Job closes', variant: 'neutral' },
+  ANNOUNCEMENT: { label: 'Announcement', variant: 'info' },
 };
 
 const DOT_COLORS = {
@@ -23,6 +24,7 @@ const DOT_COLORS = {
   HEARING: 'var(--color-danger-text)',
   JOB_POSTING_OPEN: 'var(--color-success-text)',
   JOB_POSTING_CLOSE: 'var(--color-text-muted)',
+  ANNOUNCEMENT: 'var(--color-info-text)',
 };
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -275,19 +277,17 @@ export default function Calendar() {
         <ErrorInline message={error} />
       ) : (
         <div className={fetching ? 'opacity-50 pointer-events-none transition-opacity' : 'transition-opacity'}>
-          {filterMode !== 'day' ? (
-            <Card>
-              <p className="text-[15px] font-medium mb-3">{gridTitle}</p>
-              <div className="grid grid-cols-7 gap-1.5">
-                {WEEKDAY_LABELS.map((label) => (
-                  <div key={label} className="text-[11px] text-text-muted text-center py-1">
-                    {label}
-                  </div>
-                ))}
-                {(filterMode === 'week' ? weekGridDays : monthGridDays).map(renderDayCell)}
-              </div>
-            </Card>
-          ) : null}
+          <Card>
+            <p className="text-[15px] font-medium mb-3">{gridTitle}</p>
+            <div className="grid grid-cols-7 gap-1.5">
+              {WEEKDAY_LABELS.map((label) => (
+                <div key={label} className="text-[11px] text-text-muted text-center py-1">
+                  {label}
+                </div>
+              ))}
+              {(filterMode === 'week' ? weekGridDays : monthGridDays).map(renderDayCell)}
+            </div>
+          </Card>
 
           <p className="text-[13px] font-medium text-text-secondary mt-5 mb-2.5">{agendaHeading}</p>
 

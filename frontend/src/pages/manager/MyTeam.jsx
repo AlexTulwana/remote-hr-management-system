@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { getDirectory, getOrgChartFrom } from '../../api/employeeDirectory';
 import Card from '../../components/Card';
@@ -37,7 +37,7 @@ function OrgNode({ node, depth }) {
         </div>
       </div>
       {reports.map((child) => (
-        <OrgNode key={child.id} node={child} depth={depth + 1} />
+        <OrgNode key={child.employeeId} node={child} depth={depth + 1} />
       ))}
     </div>
   );
@@ -52,6 +52,7 @@ export default function MyTeam() {
   const [status, setStatus] = useState('');
   const [selectedId, setSelectedId] = useState(user?.employeeId ?? null);
   const [treeState, setTreeState] = useState({ id: null, data: null, failed: false });
+  const structureRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -172,7 +173,15 @@ export default function MyTeam() {
                   <Pill variant={STATUS_VARIANT[m.employmentStatus] || 'neutral'}>
                     {m.employmentStatus}
                   </Pill>
-                  <Button variant="secondary" onClick={() => setSelectedId(m.id)}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setSelectedId(m.id);
+                      requestAnimationFrame(() => {
+                        structureRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      });
+                    }}
+                  >
                     View structure
                   </Button>
                 </div>
@@ -183,7 +192,7 @@ export default function MyTeam() {
       )}
 
       {selectedId ? (
-        <div className="mt-3.5">
+        <div className="mt-3.5" ref={structureRef}>
           <Card>
             <p className="text-[13px] font-medium text-text-secondary mb-3">Team structure</p>
             {treeLoading ? (
