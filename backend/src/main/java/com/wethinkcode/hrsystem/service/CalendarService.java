@@ -17,17 +17,20 @@ public class CalendarService {
     private final InterviewRepository interviewRepository;
     private final HearingRepository hearingRepository;
     private final JobPostingRepository jobPostingRepository;
+    private final AnnouncementRepository announcementRepository;
 
     public CalendarService(CalendarEventRepository calendarEventRepository,
                             LeaveRequestRepository leaveRequestRepository,
                             InterviewRepository interviewRepository,
                             HearingRepository hearingRepository,
-                            JobPostingRepository jobPostingRepository) {
+                            JobPostingRepository jobPostingRepository,
+                            AnnouncementRepository announcementRepository) {
         this.calendarEventRepository = calendarEventRepository;
         this.leaveRequestRepository = leaveRequestRepository;
         this.interviewRepository = interviewRepository;
         this.hearingRepository = hearingRepository;
         this.jobPostingRepository = jobPostingRepository;
+        this.announcementRepository = announcementRepository;
     }
 
     public List<CalendarItem> getCalendar(LocalDate from, LocalDate to, Long branchId, User currentUser) {
@@ -143,6 +146,38 @@ public class CalendarService {
                         posting.getEndDate(), posting.getEndDate(), null
                 ));
             }
+        }
+
+        // Announcements - only ones with an expiry date, shown as a marker on that date
+        for (Announcement announcement : announcementRepository.findAll()) {
+            LocalDate expiryDate = announcement.getExpiryDate();
+            if (expiryDate == null) continue;
+            if (!inRange(expiryDate, from, to)) continue;
+
+            java.util.Set<Branch> targetBranches = announcement.getBranches();
+            boolean isEveryone = targetBranches == null || targetBranches.isEmpty();
+
+            if (branchId != null && !isEveryone) {
+                boolean matchesRequestedBranch = targetBranches.stream()
+                        .anyMatch(b -> b.getId().equals(branchId));
+                if (!matchesRequestedBranch) continue;
+            }
+
+            if (!isHrOrAdmin && !isEveryone) {
+                boolean visibleToUser = userBranchId != null && targetBranches.stream()
+                        .anyMatch(b -> b.getId().equals(userBranchId));
+                if (!visibleToUser) continue;
+            }
+
+            Long announcementBranchId = isEveryone ? null : targetBranches.iterator().next().getId();
+
+            items.add(new CalendarItem(
+                    "ANNOUNCEMENT", announcement.getId(),
+                    "Expires: " + announcement.getTitle(),
+                    announcement.getContent(),
+                    expiryDate, expiryDate,
+                    announcementBranchId
+            ));
         }
 
         return items;
