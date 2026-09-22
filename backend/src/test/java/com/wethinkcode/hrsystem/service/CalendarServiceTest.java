@@ -24,6 +24,7 @@ class CalendarServiceTest {
     @Mock private InterviewRepository interviewRepository;
     @Mock private HearingRepository hearingRepository;
     @Mock private JobPostingRepository jobPostingRepository;
+    @Mock private AnnouncementRepository announcementRepository;
 
     private CalendarService calendarService;
 
@@ -42,7 +43,7 @@ class CalendarServiceTest {
     @BeforeEach
     void setUp() {
         calendarService = new CalendarService(calendarEventRepository, leaveRequestRepository,
-                interviewRepository, hearingRepository, jobPostingRepository);
+                interviewRepository, hearingRepository, jobPostingRepository, announcementRepository);
 
         branch1 = new Branch();
         branch1.setId(1L);
@@ -81,6 +82,7 @@ class CalendarServiceTest {
         when(leaveRequestRepository.findAll()).thenReturn(List.of());
         when(hearingRepository.findAll()).thenReturn(List.of());
         when(jobPostingRepository.findAll()).thenReturn(List.of());
+        when(announcementRepository.findAll()).thenReturn(List.of());
     }
 
     private CalendarEvent baseEvent(LocalDate eventDate, Branch branch, RecurrenceType recurrence) {
@@ -351,5 +353,69 @@ class CalendarServiceTest {
         assertEquals(2, result.size());
         assertTrue(result.stream().anyMatch(i -> i.getSourceType().equals("JOB_POSTING_OPEN")));
         assertTrue(result.stream().anyMatch(i -> i.getSourceType().equals("JOB_POSTING_CLOSE")));
+    }
+
+    // ---------- Announcements ----------
+
+    private Announcement announcement(LocalDate expiryDate, Branch... branches) {
+        Announcement announcement = new Announcement();
+        announcement.setId(1L);
+        announcement.setTitle("Policy update");
+        announcement.setContent("Please review the new policy.");
+        announcement.setExpiryDate(expiryDate);
+        if (branches.length > 0) {
+            announcement.setBranches(new java.util.HashSet<>(java.util.List.of(branches)));
+        }
+        return announcement;
+    }
+
+    @Test
+    void getCalendar_announcement_noExpiryDate_excluded() {
+        when(announcementRepository.findAll()).thenReturn(List.of(announcement(null)));
+
+        List<CalendarItem> result = calendarService.getCalendar(from, to, null, hrUser);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getCalendar_announcement_everyoneVisibleToAllRoles() {
+        when(announcementRepository.findAll()).thenReturn(List.of(announcement(LocalDate.of(2026, 1, 20))));
+
+        List<CalendarItem> result = calendarService.getCalendar(from, to, null, employeeUser);
+
+        assertEquals(1, result.size());
+        assertEquals("ANNOUNCEMENT", result.get(0).getSourceType());
+        assertEquals(LocalDate.of(2026, 1, 20), result.get(0).getDate());
+    }
+
+    @Test
+    void getCalendar_announcement_branchTargeted_hiddenFromOtherBranchEmployee() {
+        when(announcementRepository.findAll()).thenReturn(
+                List.of(announcement(LocalDate.of(2026, 1, 20), branch2)));
+
+        List<CalendarItem> result = calendarService.getCalendar(from, to, null, employeeUser);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getCalendar_announcement_branchTargeted_visibleToOwnBranchEmployee() {
+        when(announcementRepository.findAll()).thenReturn(
+                List.of(announcement(LocalDate.of(2026, 1, 20), branch1)));
+
+        List<CalendarItem> result = calendarService.getCalendar(from, to, null, employeeUser);
+
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    void getCalendar_announcement_hrSeesBranchTargetedRegardlessOfOwnBranch() {
+        when(announcementRepository.findAll()).thenReturn(
+                List.of(announcement(LocalDate.of(2026, 1, 20), branch2)));
+
+        List<CalendarItem> result = calendarService.getCalendar(from, to, null, hrUser);
+
+        assertEquals(1, result.size());
     }
 }
