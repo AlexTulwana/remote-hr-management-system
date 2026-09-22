@@ -24,13 +24,16 @@ public class AnnouncementController {
     // Login required - active announcements for everyone, plus the caller's branch (HR/Admin see all)
     @GetMapping
     public ResponseEntity<List<AnnouncementResponse>> getActive() {
-        return ResponseEntity.ok(announcementService.getActiveForViewer().stream().map(AnnouncementResponse::from).toList());
+        return ResponseEntity.ok(announcementService.getActiveForViewer().stream()
+                .map(a -> AnnouncementResponse.from(a, announcementService.canCurrentUserDelete(a)))
+                .toList());
     }
 
     // Login required - only announcements visible to the caller
     @GetMapping("/{id}")
     public ResponseEntity<AnnouncementResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(AnnouncementResponse.from(announcementService.getByIdForViewer(id)));
+        var announcement = announcementService.getByIdForViewer(id);
+        return ResponseEntity.ok(AnnouncementResponse.from(announcement, announcementService.canCurrentUserDelete(announcement)));
     }
 
     // Login required - serves the poster image file (same visibility as the announcement)
@@ -44,7 +47,9 @@ public class AnnouncementController {
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping("/all")
     public ResponseEntity<List<AnnouncementResponse>> getAll() {
-        return ResponseEntity.ok(announcementService.getAll().stream().map(AnnouncementResponse::from).toList());
+        return ResponseEntity.ok(announcementService.getAll().stream()
+                .map(a -> AnnouncementResponse.from(a, announcementService.canCurrentUserDelete(a)))
+                .toList());
     }
 
     // PROTECTED - HR/Admin post to any branches or everyone; Manager posts to their own branch only (enforced in service)
@@ -67,7 +72,8 @@ public class AnnouncementController {
             request.setExpiryDate(java.time.LocalDate.parse(expiryDate));
         }
 
-        return ResponseEntity.ok(AnnouncementResponse.from(announcementService.create(request, poster)));
+        var created = announcementService.create(request, poster);
+        return ResponseEntity.ok(AnnouncementResponse.from(created, announcementService.canCurrentUserDelete(created)));
     }
 
     // PROTECTED - HR/Admin delete anything; Manager deletes only announcements posted solely to their own branch (enforced in service)
