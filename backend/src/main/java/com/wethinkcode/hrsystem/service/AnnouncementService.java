@@ -50,6 +50,9 @@ public class AnnouncementService {
     }
 
     public Announcement create(AnnouncementRequest request, MultipartFile poster) {
+        if (request.getExpiryDate() == null) {
+            throw new RuntimeException("Expiry date is required");
+        }
         User postedBy = currentUserService.getCurrentUser();
         String role = postedBy.getRole();
         List<Long> requestedIds = request.getBranchIds() == null
@@ -134,23 +137,36 @@ public class AnnouncementService {
         return announcement;
     }
 
-    public void delete(Long id) {
-        Announcement announcement = getById(id);
-        User currentUser = currentUserService.getCurrentUser();
+    private boolean isDeletableBy(Announcement announcement, User currentUser) {
         String role = currentUser.getRole();
-
+        if (role.equals("HR") || role.equals("ADMIN")) {
+            return true;
+        }
         if (role.equals("MANAGER")) {
             Employee employee = currentUser.getEmployee();
             Branch managerBranch = (employee != null) ? employee.getBranch() : null;
             Set<Branch> targets = announcement.getBranches();
-            boolean onlyOwnBranch = managerBranch != null
+            return managerBranch != null
                     && targets != null
                     && targets.size() == 1
                     && targets.iterator().next().getId().equals(managerBranch.getId());
-            if (!onlyOwnBranch) {
+        }
+        return false;
+    }
+
+    public boolean canCurrentUserDelete(Announcement announcement) {
+        return isDeletableBy(announcement, currentUserService.getCurrentUser());
+    }
+
+    public void delete(Long id) {
+        Announcement announcement = getById(id);
+        User currentUser = currentUserService.getCurrentUser();
+
+        if (!isDeletableBy(announcement, currentUser)) {
+            String role = currentUser.getRole();
+            if (role.equals("MANAGER")) {
                 throw new AccessDeniedException("Managers may only delete announcements posted only to their own branch");
             }
-        } else if (!role.equals("HR") && !role.equals("ADMIN")) {
             throw new AccessDeniedException("You are not authorized to delete announcements");
         }
 
