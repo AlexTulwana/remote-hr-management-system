@@ -1,8 +1,9 @@
 package com.wethinkcode.hrsystem.controller;
 
 import com.wethinkcode.hrsystem.dto.EmailTemplateUpdateRequest;
+import com.wethinkcode.hrsystem.dto.JobPostingPublicResponse;
 import com.wethinkcode.hrsystem.dto.JobPostingRequest;
-import com.wethinkcode.hrsystem.model.JobPosting;
+import com.wethinkcode.hrsystem.dto.JobPostingResponse;
 import com.wethinkcode.hrsystem.service.JobPostingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,42 +23,42 @@ public class JobPostingController {
 
     // PUBLIC - candidates browsing open positions
     @GetMapping
-    public ResponseEntity<List<JobPosting>> getOpen() {
-        return ResponseEntity.ok(jobPostingService.getOpen());
+    public ResponseEntity<List<JobPostingPublicResponse>> getOpen() {
+        return ResponseEntity.ok(jobPostingService.getOpen().stream().map(JobPostingPublicResponse::from).toList());
     }
 
     // PUBLIC - full detail view for a specific posting (the "apply" link target)
     @GetMapping("/{id}")
-    public ResponseEntity<JobPosting> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(jobPostingService.getById(id));
+    public ResponseEntity<JobPostingPublicResponse> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(JobPostingPublicResponse.from(jobPostingService.getById(id)));
     }
 
     // PROTECTED - HR/Admin only, includes closed postings for management
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping("/all")
-    public ResponseEntity<List<JobPosting>> getAll() {
-        return ResponseEntity.ok(jobPostingService.getAll());
+    public ResponseEntity<List<JobPostingResponse>> getAll() {
+        return ResponseEntity.ok(jobPostingService.getAll().stream().map(JobPostingResponse::from).toList());
     }
 
     // PROTECTED - HR/Admin only
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<JobPosting> create(@RequestBody JobPostingRequest request) {
-        return ResponseEntity.ok(jobPostingService.create(request));
+    public ResponseEntity<JobPostingResponse> create(@RequestBody JobPostingRequest request) {
+        return ResponseEntity.ok(JobPostingResponse.from(jobPostingService.create(request)));
     }
 
     // PROTECTED - HR/Admin only
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PatchMapping("/{id}")
-    public ResponseEntity<JobPosting> update(@PathVariable Long id, @RequestBody JobPostingRequest request) {
-        return ResponseEntity.ok(jobPostingService.update(id, request));
+    public ResponseEntity<JobPostingResponse> update(@PathVariable Long id, @RequestBody JobPostingRequest request) {
+        return ResponseEntity.ok(JobPostingResponse.from(jobPostingService.update(id, request)));
     }
 
     // PROTECTED - HR/Admin only
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PatchMapping("/{id}/email-templates")
-    public ResponseEntity<JobPosting> updateEmailTemplates(@PathVariable Long id, @RequestBody EmailTemplateUpdateRequest request) {
-        return ResponseEntity.ok(jobPostingService.updateEmailTemplates(id, request));
+    public ResponseEntity<JobPostingResponse> updateEmailTemplates(@PathVariable Long id, @RequestBody EmailTemplateUpdateRequest request) {
+        return ResponseEntity.ok(JobPostingResponse.from(jobPostingService.updateEmailTemplates(id, request)));
     }
 
     // PROTECTED - HR/Admin only
