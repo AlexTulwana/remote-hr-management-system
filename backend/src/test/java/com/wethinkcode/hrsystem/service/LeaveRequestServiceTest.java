@@ -148,6 +148,48 @@ class LeaveRequestServiceTest {
         assertThat(result.getRejectionReason()).isEqualTo("Insufficient leave balance");
     }
 
+    @Test
+    void approve_alreadyApproved_throwsIllegalState() {
+        existingLeave.setStatus("APPROVED");
+        when(leaveRequestRepository.findById(1L)).thenReturn(Optional.of(existingLeave));
+
+        User hrUser = new User();
+        hrUser.setRole("HR");
+        when(currentUserService.getCurrentUser()).thenReturn(hrUser);
+
+        assertThatThrownBy(() -> leaveRequestService.approve(1L))
+                .isInstanceOf(IllegalStateException.class);
+        verify(leaveRequestRepository, never()).save(any());
+    }
+
+    @Test
+    void reject_alreadyRejected_throwsIllegalState() {
+        existingLeave.setStatus("REJECTED");
+        when(leaveRequestRepository.findById(1L)).thenReturn(Optional.of(existingLeave));
+
+        User hrUser = new User();
+        hrUser.setRole("HR");
+        when(currentUserService.getCurrentUser()).thenReturn(hrUser);
+
+        assertThatThrownBy(() -> leaveRequestService.reject(1L, "reason"))
+                .isInstanceOf(IllegalStateException.class);
+        verify(leaveRequestRepository, never()).save(any());
+    }
+
+    @Test
+    void approve_alreadyRejected_throwsIllegalState() {
+        existingLeave.setStatus("REJECTED");
+        when(leaveRequestRepository.findById(1L)).thenReturn(Optional.of(existingLeave));
+
+        User hrUser = new User();
+        hrUser.setRole("HR");
+        when(currentUserService.getCurrentUser()).thenReturn(hrUser);
+
+        assertThatThrownBy(() -> leaveRequestService.approve(1L))
+                .isInstanceOf(IllegalStateException.class);
+        verify(leaveRequestRepository, never()).save(any());
+    }
+
     // --- getById ---
 
     @Test
