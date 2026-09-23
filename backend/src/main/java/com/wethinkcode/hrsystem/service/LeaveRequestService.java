@@ -59,6 +59,7 @@ public class LeaveRequestService {
     public LeaveRequest approve(Long leaveId) {
         LeaveRequest leave = getById(leaveId);
         requireManagerSameBranchOrHrAdmin(leave.getEmployee());
+        requirePending(leave);
         leave.setStatus("APPROVED");
         return leaveRequestRepository.save(leave);
     }
@@ -66,9 +67,16 @@ public class LeaveRequestService {
     public LeaveRequest reject(Long leaveId, String reason) {
         LeaveRequest leave = getById(leaveId);
         requireManagerSameBranchOrHrAdmin(leave.getEmployee());
+        requirePending(leave);
         leave.setStatus("REJECTED");
         leave.setRejectionReason(reason);
         return leaveRequestRepository.save(leave);
+    }
+
+    private void requirePending(LeaveRequest leave) {
+        if (!"PENDING".equals(leave.getStatus())) {
+            throw new IllegalStateException("This leave request has already been " + leave.getStatus().toLowerCase());
+        }
     }
 
     public LeaveRequest getById(Long id) {
