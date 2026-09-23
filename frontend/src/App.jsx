@@ -16,6 +16,7 @@ import LeaveApprovals from './pages/manager/LeaveApprovals';
 import TeamRequests from './pages/manager/TeamRequests';
 import TeamDisciplinary from './pages/manager/TeamDisciplinary';
 import TeamReviews from './pages/manager/TeamReviews';
+import EmployeeDirectory from './pages/hr/EmployeeDirectory';
 import AppLayout from './components/AppLayout';
 import ProtectedRoute from './auth/ProtectedRoute';
 import { useAuth } from './auth/AuthContext';
@@ -37,6 +38,9 @@ function navItemsFor(role) {
     items.push({ to: '/manager/disciplinary-cases', label: 'Disciplinary Cases' });
     items.push({ to: '/manager/performance-reviews', label: 'Performance Reviews' });
     items.push({ to: '/manager/my-requests', label: 'My Requests' });
+  }
+  if (role === 'HR' || role === 'ADMIN') {
+    items.push({ to: '/hr/employee-directory', label: 'Employee Directory' });
   }
   items.push(
     { to: '/messages', label: 'Messages' },
@@ -170,6 +174,16 @@ function App() {
           <ProtectedRoute allowedRoles={['MANAGER']}>
             <AppLayout navItems={navItems}>
               <MyRequests />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/employee-directory"
+        element={
+          <ProtectedRoute allowedRoles={['HR', 'ADMIN']}>
+            <AppLayout navItems={navItems}>
+              <EmployeeDirectory />
             </AppLayout>
           </ProtectedRoute>
         }
