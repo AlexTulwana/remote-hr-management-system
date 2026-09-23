@@ -146,10 +146,14 @@ public class AnnouncementService {
             Employee employee = currentUser.getEmployee();
             Branch managerBranch = (employee != null) ? employee.getBranch() : null;
             Set<Branch> targets = announcement.getBranches();
-            return managerBranch != null
+            boolean ownBranchOnly = managerBranch != null
                     && targets != null
                     && targets.size() == 1
                     && targets.iterator().next().getId().equals(managerBranch.getId());
+            boolean isAuthor = announcement.getPostedBy() != null
+                    && announcement.getPostedBy().getId() != null
+                    && announcement.getPostedBy().getId().equals(currentUser.getId());
+            return ownBranchOnly && isAuthor;
         }
         return false;
     }
@@ -165,7 +169,7 @@ public class AnnouncementService {
         if (!isDeletableBy(announcement, currentUser)) {
             String role = currentUser.getRole();
             if (role.equals("MANAGER")) {
-                throw new AccessDeniedException("Managers may only delete announcements posted only to their own branch");
+                throw new AccessDeniedException("Managers may only delete their own announcements posted solely to their own branch");
             }
             throw new AccessDeniedException("You are not authorized to delete announcements");
         }
