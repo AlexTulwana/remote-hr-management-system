@@ -74,7 +74,12 @@ class AnnouncementServiceTest {
     }
 
     private User userWithRole(String role) {
+        return userWithRole(role, null);
+    }
+
+    private User userWithRole(String role, Long id) {
         User user = new User();
+        user.setId(id);
         user.setRole(role);
         return user;
     }
@@ -87,8 +92,13 @@ class AnnouncementServiceTest {
     }
 
     private Announcement announcementFor(Long id, Branch... branches) {
+        return announcementFor(id, null, branches);
+    }
+
+    private Announcement announcementFor(Long id, User postedBy, Branch... branches) {
         Announcement announcement = new Announcement();
         announcement.setId(id);
+        announcement.setPostedBy(postedBy);
         announcement.setBranches(Set.of(branches));
         return announcement;
     }
@@ -372,16 +382,29 @@ class AnnouncementServiceTest {
     // ---- delete() ----
 
     @Test
-    void delete_managerOwnBranchOnlyAnnouncement_succeeds() {
-        when(announcementRepository.findById(5L)).thenReturn(Optional.of(announcementFor(5L, branch1)));
-
-        User manager = userWithRole("MANAGER");
+    void delete_managerOwnBranchOnlyAnnouncementTheyPosted_succeeds() {
+        User manager = userWithRole("MANAGER", 10L);
         manager.setEmployee(employeeWithBranch(branch1));
+        when(announcementRepository.findById(5L)).thenReturn(Optional.of(announcementFor(5L, manager, branch1)));
         when(currentUserService.getCurrentUser()).thenReturn(manager);
 
         announcementService.delete(5L);
 
         verify(announcementRepository).deleteById(5L);
+    }
+
+    @Test
+    void delete_managerOwnBranchButPostedByAnotherManager_throwsAccessDenied() {
+        User author = userWithRole("MANAGER", 10L);
+        author.setEmployee(employeeWithBranch(branch1));
+        when(announcementRepository.findById(5L)).thenReturn(Optional.of(announcementFor(5L, author, branch1)));
+
+        User otherManager = userWithRole("MANAGER", 11L);
+        otherManager.setEmployee(employeeWithBranch(branch1));
+        when(currentUserService.getCurrentUser()).thenReturn(otherManager);
+
+        assertThrows(AccessDeniedException.class, () -> announcementService.delete(5L));
+        verify(announcementRepository, never()).deleteById(any());
     }
 
     @Test
