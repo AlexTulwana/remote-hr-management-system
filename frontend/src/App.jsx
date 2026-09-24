@@ -12,6 +12,7 @@ import LeaveRequests from './pages/employee/LeaveRequests';
 import Attendance from './pages/employee/Attendance';
 import MyRequests from './pages/employee/MyRequests';
 import Payslips from './pages/employee/Payslips';
+import MyReviews from './pages/employee/MyReviews';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
 import MyTeam from './pages/manager/MyTeam';
 import LeaveApprovals from './pages/manager/LeaveApprovals';
@@ -23,6 +24,11 @@ import Recruitment from './pages/hr/Recruitment';
 import Onboarding from './pages/hr/Onboarding';
 import Offboarding from './pages/hr/Offboarding';
 import LeaveManagement from './pages/hr/LeaveManagement';
+import HrDisciplinaryCases from './pages/hr/HrDisciplinaryCases';
+import HrHearings from './pages/hr/HrHearings';
+import HrEscalations from './pages/hr/HrEscalations';
+import HrPerformanceReviews from './pages/hr/HrPerformanceReviews';
+import ReportConcern from './pages/ReportConcern';
 import AppLayout from './components/AppLayout';
 import ProtectedRoute from './auth/ProtectedRoute';
 import { useAuth } from './auth/AuthContext';
@@ -35,6 +41,7 @@ function navItemsFor(role) {
     items.push({ to: '/employee/attendance', label: 'Attendance' });
     items.push({ to: '/employee/my-requests', label: 'My Requests' });
     items.push({ to: '/employee/payslips', label: 'Payslips' });
+    items.push({ to: '/employee/performance-reviews', label: 'Performance Reviews' });
   }
   if (role === 'MANAGER') {
     items.push({ to: '/manager/dashboard', label: 'Dashboard' });
@@ -51,8 +58,13 @@ function navItemsFor(role) {
     items.push({ to: '/hr/onboarding', label: 'Onboarding' });
     items.push({ to: '/hr/offboarding', label: 'Offboarding' });
     items.push({ to: '/hr/leave-management', label: 'Leave Management' });
+    items.push({ to: '/hr/disciplinary-cases', label: 'Disciplinary Cases' });
+    items.push({ to: '/hr/hearings', label: 'Hearings' });
+    items.push({ to: '/hr/escalations', label: 'Escalations' });
+    items.push({ to: '/hr/performance-reviews', label: 'Performance Reviews' });
   }
   items.push(
+    { to: '/report-concern', label: 'Report a Concern' },
     { to: '/messages', label: 'Messages' },
     { to: '/announcements', label: 'Announcements' },
     { to: '/calendar', label: 'Calendar' },
@@ -116,6 +128,16 @@ function App() {
           <ProtectedRoute allowedRoles={['EMPLOYEE']}>
             <AppLayout navItems={navItems}>
               <Payslips />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/employee/performance-reviews"
+        element={
+          <ProtectedRoute allowedRoles={['EMPLOYEE']}>
+            <AppLayout navItems={navItems}>
+              <MyReviews />
             </AppLayout>
           </ProtectedRoute>
         }
@@ -236,6 +258,56 @@ function App() {
           <ProtectedRoute allowedRoles={['HR', 'ADMIN']}>
             <AppLayout navItems={navItems}>
               <LeaveManagement />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/disciplinary-cases"
+        element={
+          <ProtectedRoute allowedRoles={['HR', 'ADMIN']}>
+            <AppLayout navItems={navItems}>
+              <HrDisciplinaryCases />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/hearings"
+        element={
+          <ProtectedRoute allowedRoles={['HR', 'ADMIN']}>
+            <AppLayout navItems={navItems}>
+              <HrHearings />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/escalations"
+        element={
+          <ProtectedRoute allowedRoles={['HR', 'ADMIN']}>
+            <AppLayout navItems={navItems}>
+              <HrEscalations />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/performance-reviews"
+        element={
+          <ProtectedRoute allowedRoles={['HR', 'ADMIN']}>
+            <AppLayout navItems={navItems}>
+              <HrPerformanceReviews />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/report-concern"
+        element={
+          <ProtectedRoute>
+            <AppLayout navItems={navItems}>
+              <ReportConcern />
             </AppLayout>
           </ProtectedRoute>
         }
