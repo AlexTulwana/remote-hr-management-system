@@ -1,10 +1,15 @@
 package com.wethinkcode.hrsystem.controller;
 
 import com.wethinkcode.hrsystem.dto.ApplicationRequest;
+import com.wethinkcode.hrsystem.dto.ApplicationResponse;
+import com.wethinkcode.hrsystem.dto.ApplicationDocumentResponse;
+import com.wethinkcode.hrsystem.dto.ApplicationSubmitResponse;
 import com.wethinkcode.hrsystem.model.Application;
-import com.wethinkcode.hrsystem.model.ApplicationDocument;
 import com.wethinkcode.hrsystem.model.DocumentType;
 import com.wethinkcode.hrsystem.service.ApplicationService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -28,7 +33,7 @@ public class ApplicationController {
 
     // PUBLIC - candidates apply directly, no login needed
     @PostMapping(value = "/{jobPostingId}", consumes = "multipart/form-data")
-    public ResponseEntity<Application> submit(
+    public ResponseEntity<ApplicationSubmitResponse> submit(
             @PathVariable Long jobPostingId,
             @RequestParam String candidateName,
             @RequestParam String candidateEmail,
@@ -57,54 +62,92 @@ public class ApplicationController {
             }
         }
 
-        return ResponseEntity.ok(applicationService.submit(jobPostingId, request, cv, additionalDocuments));
+        Application saved = applicationService.submit(jobPostingId, request, cv, additionalDocuments);
+        return ResponseEntity.ok(ApplicationSubmitResponse.from(saved));
     }
 
     // PROTECTED - HR/Admin only
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping("/{id}/documents")
-    public ResponseEntity<List<ApplicationDocument>> getDocuments(@PathVariable Long id) {
-        return ResponseEntity.ok(applicationService.getDocuments(id));
+    public ResponseEntity<List<ApplicationDocumentResponse>> getDocuments(@PathVariable Long id) {
+        return ResponseEntity.ok(applicationService.getDocuments(id).stream()
+                .map(ApplicationDocumentResponse::from).toList());
+    }
+
+    // PROTECTED - HR/Admin only. Content-Type resolved from file extension so PDFs/images
+    // can render inline in a browser tab; Word docs fall back to a plain download.
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+    @GetMapping("/{id}/cv")
+    public ResponseEntity<Resource> downloadCv(@PathVariable Long id) {
+        Resource file = applicationService.downloadCv(id);
+        MediaType contentType = applicationService.resolveContentType(file.getFilename());
+        return ResponseEntity.ok()
+                .contentType(contentType)
+                .header(HttpHeaders.CONTENT_DISPOSITION, dispositionFor(contentType, file.getFilename()))
+                .body(file);
+    }
+
+    // PROTECTED - HR/Admin only. Same Content-Type resolution as the CV download.
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+    @GetMapping("/{id}/documents/{documentId}/download")
+    public ResponseEntity<Resource> downloadDocument(@PathVariable Long id, @PathVariable Long documentId) {
+        Resource file = applicationService.downloadDocument(id, documentId);
+        MediaType contentType = applicationService.resolveContentType(file.getFilename());
+        return ResponseEntity.ok()
+                .contentType(contentType)
+                .header(HttpHeaders.CONTENT_DISPOSITION, dispositionFor(contentType, file.getFilename()))
+                .body(file);
+    }
+
+    private String dispositionFor(MediaType contentType, String filename) {
+        boolean viewable = contentType.equals(MediaType.APPLICATION_PDF)
+                || contentType.equals(MediaType.IMAGE_JPEG)
+                || contentType.equals(MediaType.IMAGE_PNG);
+        String disposition = viewable ? "inline" : "attachment";
+        return disposition + "; filename=\"" + filename + "\"";
     }
 
     // PROTECTED - HR/Admin only
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PatchMapping("/{id}/status")
-    public ResponseEntity<Application> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        return ResponseEntity.ok(applicationService.updateStatus(id, body.get("status")));
+    public ResponseEntity<ApplicationResponse> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(ApplicationResponse.from(applicationService.updateStatus(id, body.get("status"))));
     }
 
     // PROTECTED - HR/Admin only
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping("/job-posting/{jobPostingId}")
-    public ResponseEntity<List<Application>> getByJobPosting(@PathVariable Long jobPostingId) {
-        return ResponseEntity.ok(applicationService.getByJobPosting(jobPostingId));
+    public ResponseEntity<List<ApplicationResponse>> getByJobPosting(@PathVariable Long jobPostingId) {
+        return ResponseEntity.ok(applicationService.getByJobPosting(jobPostingId).stream()
+                .map(ApplicationResponse::from).toList());
     }
 
     // PROTECTED - HR/Admin only
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<Application>> getByStatus(@PathVariable String status) {
-        return ResponseEntity.ok(applicationService.getByStatus(status));
+    public ResponseEntity<List<ApplicationResponse>> getByStatus(@PathVariable String status) {
+        return ResponseEntity.ok(applicationService.getByStatus(status).stream()
+                .map(ApplicationResponse::from).toList());
     }
 
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping("/{id}")
-    public ResponseEntity<Application> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(applicationService.getById(id));
+    public ResponseEntity<ApplicationResponse> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(ApplicationResponse.from(applicationService.getById(id)));
     }
 
     // PROTECTED - HR/Admin only
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping
-    public ResponseEntity<List<Application>> getAll() {
-        return ResponseEntity.ok(applicationService.getAll());
+    public ResponseEntity<List<ApplicationResponse>> getAll() {
+        return ResponseEntity.ok(applicationService.getAll().stream()
+                .map(ApplicationResponse::from).toList());
     }
 
     // PROTECTED - HR/Admin only
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PatchMapping("/{id}/outcome")
-    public ResponseEntity<Application> setOutcome(@PathVariable Long id, @RequestBody ApplicationOutcomeRequest request) {
-        return ResponseEntity.ok(applicationService.setOutcome(id, request));
+    public ResponseEntity<ApplicationResponse> setOutcome(@PathVariable Long id, @RequestBody ApplicationOutcomeRequest request) {
+        return ResponseEntity.ok(ApplicationResponse.from(applicationService.setOutcome(id, request)));
     }
 }
