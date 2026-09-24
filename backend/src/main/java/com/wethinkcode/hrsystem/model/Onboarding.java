@@ -22,6 +22,10 @@ public class Onboarding {
     @JoinColumn(name = "performed_by", nullable = false)
     private User performedBy;
 
+    @OneToOne
+    @JoinColumn(name = "application_id", unique = true)
+    private Application application;
+
     private LocalDate startDate;
 
     private String status = "IN_PROGRESS"; // IN_PROGRESS, COMPLETE
