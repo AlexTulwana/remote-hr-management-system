@@ -1,5 +1,7 @@
 package com.wethinkcode.hrsystem.controller;
 
+import com.wethinkcode.hrsystem.model.Application;
+import com.wethinkcode.hrsystem.model.JobPosting;
 import com.wethinkcode.hrsystem.model.Onboarding;
 import com.wethinkcode.hrsystem.security.JwtUtil;
 import com.wethinkcode.hrsystem.service.OnboardingService;
@@ -222,5 +224,193 @@ class OnboardingControllerTest {
                 .andExpect(content().string(not(containsString("ID-SECRET-456"))))
                 .andExpect(content().string(not(containsString("PASSWORD-HASH-789"))))
                 .andExpect(content().string(not(containsString("RESET-TOKEN-000"))));
+    }
+
+    // ---- onboarding from an accepted application ----
+
+    private static final String FROM_APP_BODY = """
+            {
+              "role": "EMPLOYEE",
+              "startDate": "2026-10-01",
+              "reportsToId": 50,
+              "notes": "welcome"
+            }
+            """;
+
+    @Test
+    void getCandidates_unauthenticated_isRejected() throws Exception {
+        mockMvc.perform(get("/api/onboarding/candidates"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "HR")
+    void getCandidates_hrRole_isAllowed() throws Exception {
+        when(onboardingService.getCandidates()).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/onboarding/candidates"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "MANAGER")
+    void getCandidates_managerRole_isForbidden() throws Exception {
+        mockMvc.perform(get("/api/onboarding/candidates"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "HR")
+    void getCandidates_doesNotLeakSensitiveFields() throws Exception {
+        Employee poster = new Employee();
+        poster.setSalary(98765.0);
+        poster.setBankingDetails("BANK-SECRET-123");
+        User postedBy = new User();
+        postedBy.setUsername("poster");
+        postedBy.setPassword("PASSWORD-HASH-789");
+        postedBy.setEmployee(poster);
+
+        JobPosting posting = new JobPosting();
+        posting.setTitle("Engineer");
+        posting.setDepartment("Engineering");
+        posting.setPostedBy(postedBy);
+        posting.setAcceptedEmailTemplate("TEMPLATE-SECRET");
+
+        Application application = new Application();
+        application.setId(7L);
+        application.setJobPosting(posting);
+        application.setCandidateName("New Hire");
+        application.setCandidateEmail("new.hire@example.com");
+        application.setCvPath("uploads/applications/CV-PATH-SECRET.pdf");
+        when(onboardingService.getCandidates()).thenReturn(List.of(application));
+
+        mockMvc.perform(get("/api/onboarding/candidates"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].applicationId").value(7))
+                .andExpect(jsonPath("$[0].candidateName").value("New Hire"))
+                .andExpect(jsonPath("$[0].jobPostingTitle").value("Engineer"))
+                .andExpect(content().string(not(containsString("98765"))))
+                .andExpect(content().string(not(containsString("BANK-SECRET-123"))))
+                .andExpect(content().string(not(containsString("PASSWORD-HASH-789"))))
+                .andExpect(content().string(not(containsString("TEMPLATE-SECRET"))))
+                .andExpect(content().string(not(containsString("CV-PATH-SECRET"))));
+    }
+
+    @Test
+    @WithMockUser(roles = "HR")
+    void getManagerOptions_hrRole_isAllowed() throws Exception {
+        when(onboardingService.getManagerOptions()).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/onboarding/managers"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void getManagerOptions_employeeRole_isForbidden() throws Exception {
+        mockMvc.perform(get("/api/onboarding/managers"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "HR")
+    void getManagerOptions_doesNotLeakSensitiveFields() throws Exception {
+        Employee employee = new Employee();
+        employee.setId(50L);
+        employee.setEmployeeNumber("EMP-1002");
+        employee.setFullName("Sam Manager");
+        employee.setSalary(98765.0);
+        employee.setBankingDetails("BANK-SECRET-123");
+        employee.setIdNumber("ID-SECRET-456");
+
+        User login = new User();
+        login.setUsername("mgrtest1");
+        login.setRole("MANAGER");
+        login.setPassword("PASSWORD-HASH-789");
+        login.setResetToken("RESET-TOKEN-000");
+        login.setEmployee(employee);
+        when(onboardingService.getManagerOptions()).thenReturn(List.of(login));
+
+        mockMvc.perform(get("/api/onboarding/managers"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].employeeId").value(50))
+                .andExpect(jsonPath("$[0].fullName").value("Sam Manager"))
+                .andExpect(jsonPath("$[0].role").value("MANAGER"))
+                .andExpect(content().string(not(containsString("98765"))))
+                .andExpect(content().string(not(containsString("BANK-SECRET-123"))))
+                .andExpect(content().string(not(containsString("ID-SECRET-456"))))
+                .andExpect(content().string(not(containsString("PASSWORD-HASH-789"))))
+                .andExpect(content().string(not(containsString("RESET-TOKEN-000"))));
+    }
+
+    @Test
+    void startFromApplication_unauthenticated_isRejected() throws Exception {
+        mockMvc.perform(post("/api/onboarding/from-application/7")
+                        .contentType("application/json")
+                        .content(FROM_APP_BODY))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "HR")
+    void startFromApplication_hrRole_isAllowed() throws Exception {
+        when(onboardingService.startFromApplication(any(), any(), any(), any(), any()))
+                .thenReturn(new Onboarding());
+
+        mockMvc.perform(post("/api/onboarding/from-application/7")
+                        .contentType("application/json")
+                        .content(FROM_APP_BODY))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "MANAGER")
+    void startFromApplication_managerRole_isForbidden() throws Exception {
+        mockMvc.perform(post("/api/onboarding/from-application/7")
+                        .contentType("application/json")
+                        .content(FROM_APP_BODY))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "HR")
+    void startFromApplication_passesBodyFieldsToService() throws Exception {
+        when(onboardingService.startFromApplication(any(), any(), any(), any(), any()))
+                .thenReturn(new Onboarding());
+
+        mockMvc.perform(post("/api/onboarding/from-application/7")
+                        .contentType("application/json")
+                        .content(FROM_APP_BODY))
+                .andExpect(status().isOk());
+
+        org.mockito.Mockito.verify(onboardingService).startFromApplication(
+                org.mockito.ArgumentMatchers.eq(7L),
+                org.mockito.ArgumentMatchers.eq("EMPLOYEE"),
+                org.mockito.ArgumentMatchers.eq(java.time.LocalDate.of(2026, 10, 1)),
+                org.mockito.ArgumentMatchers.eq(50L),
+                org.mockito.ArgumentMatchers.eq("welcome"));
+    }
+
+    @Test
+    void resendInvite_unauthenticated_isRejected() throws Exception {
+        mockMvc.perform(post("/api/onboarding/10/resend-invite"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "HR")
+    void resendInvite_hrRole_isAllowed() throws Exception {
+        mockMvc.perform(post("/api/onboarding/10/resend-invite"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Invite sent"));
+
+        org.mockito.Mockito.verify(onboardingService).resendInvite(10L);
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void resendInvite_employeeRole_isForbidden() throws Exception {
+        mockMvc.perform(post("/api/onboarding/10/resend-invite"))
+                .andExpect(status().isForbidden());
     }
 }
