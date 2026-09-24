@@ -24,3 +24,11 @@ export function createReview({
     }),
   });
 }
+
+export function getEmployeeReviews(employeeId) {
+  return apiFetch(`/api/reviews/employee/${employeeId}`);
+}
+
+export function getAllReviews() {
+  return apiFetch('/api/reviews');
+}
