@@ -11,6 +11,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUsername(String username);
     Optional<User> findByEmployeeEmployeeNumber(String employeeNumber);
     Optional<User> findByEmployeeIdNumber(String idNumber);
+    Optional<User> findByResetToken(String resetToken);
+    Optional<User> findByEmployeeId(Long employeeId);
+    List<User> findByRoleIn(java.util.Collection<String> roles);
     List<User> findByEmployeeFullNameContainingIgnoreCase(String query);
 
     @Query("SELECT u FROM User u WHERE u.employee IS NOT NULL AND u.id <> :excludeUserId " +
