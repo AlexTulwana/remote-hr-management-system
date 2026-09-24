@@ -1,6 +1,6 @@
 package com.wethinkcode.hrsystem.controller;
 
-import com.wethinkcode.hrsystem.model.Offboarding;
+import com.wethinkcode.hrsystem.dto.OffboardingResponse;
 import com.wethinkcode.hrsystem.service.OffboardingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,30 +22,30 @@ public class OffboardingController {
     }
 
     @PostMapping("/{employeeId}")
-    public ResponseEntity<Offboarding> start(@PathVariable Long employeeId, @RequestBody Map<String, String> body) {
+    public ResponseEntity<OffboardingResponse> start(@PathVariable Long employeeId, @RequestBody Map<String, String> body) {
         String type = body.get("type");
         LocalDate effectiveDate = LocalDate.parse(body.get("effectiveDate"));
         String reason = body.get("reason");
-        return ResponseEntity.ok(offboardingService.start(employeeId, type, effectiveDate, reason));
+        return ResponseEntity.ok(OffboardingResponse.from(offboardingService.start(employeeId, type, effectiveDate, reason)));
     }
 
     @PatchMapping("/{id}/complete")
-    public ResponseEntity<Offboarding> complete(@PathVariable Long id) {
-        return ResponseEntity.ok(offboardingService.complete(id));
+    public ResponseEntity<OffboardingResponse> complete(@PathVariable Long id) {
+        return ResponseEntity.ok(OffboardingResponse.from(offboardingService.complete(id)));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Offboarding> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(offboardingService.getById(id));
+    public ResponseEntity<OffboardingResponse> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(OffboardingResponse.from(offboardingService.getById(id)));
     }
 
     @GetMapping("/employee/{employeeId}")
-    public ResponseEntity<List<Offboarding>> getByEmployee(@PathVariable Long employeeId) {
-        return ResponseEntity.ok(offboardingService.getByEmployee(employeeId));
+    public ResponseEntity<List<OffboardingResponse>> getByEmployee(@PathVariable Long employeeId) {
+        return ResponseEntity.ok(offboardingService.getByEmployee(employeeId).stream().map(OffboardingResponse::from).toList());
     }
 
     @GetMapping
-    public ResponseEntity<List<Offboarding>> getAll() {
-        return ResponseEntity.ok(offboardingService.getAll());
+    public ResponseEntity<List<OffboardingResponse>> getAll() {
+        return ResponseEntity.ok(offboardingService.getAll().stream().map(OffboardingResponse::from).toList());
     }
 }
