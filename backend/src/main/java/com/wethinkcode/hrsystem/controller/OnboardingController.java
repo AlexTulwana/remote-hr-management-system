@@ -1,6 +1,6 @@
 package com.wethinkcode.hrsystem.controller;
 
-import com.wethinkcode.hrsystem.model.Onboarding;
+import com.wethinkcode.hrsystem.dto.OnboardingResponse;
 import com.wethinkcode.hrsystem.service.OnboardingService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,29 +22,29 @@ public class OnboardingController {
     }
 
     @PostMapping("/{employeeId}")
-    public ResponseEntity<Onboarding> start(@PathVariable Long employeeId, @RequestBody Map<String, String> body) {
+    public ResponseEntity<OnboardingResponse> start(@PathVariable Long employeeId, @RequestBody Map<String, String> body) {
         LocalDate startDate = LocalDate.parse(body.get("startDate"));
         String notes = body.get("notes");
-        return ResponseEntity.ok(onboardingService.start(employeeId, startDate, notes));
+        return ResponseEntity.ok(OnboardingResponse.from(onboardingService.start(employeeId, startDate, notes)));
     }
 
     @PatchMapping("/{id}/complete")
-    public ResponseEntity<Onboarding> complete(@PathVariable Long id) {
-        return ResponseEntity.ok(onboardingService.complete(id));
+    public ResponseEntity<OnboardingResponse> complete(@PathVariable Long id) {
+        return ResponseEntity.ok(OnboardingResponse.from(onboardingService.complete(id)));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Onboarding> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(onboardingService.getById(id));
+    public ResponseEntity<OnboardingResponse> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(OnboardingResponse.from(onboardingService.getById(id)));
     }
 
     @GetMapping("/employee/{employeeId}")
-    public ResponseEntity<List<Onboarding>> getByEmployee(@PathVariable Long employeeId) {
-        return ResponseEntity.ok(onboardingService.getByEmployee(employeeId));
+    public ResponseEntity<List<OnboardingResponse>> getByEmployee(@PathVariable Long employeeId) {
+        return ResponseEntity.ok(onboardingService.getByEmployee(employeeId).stream().map(OnboardingResponse::from).toList());
     }
 
     @GetMapping
-    public ResponseEntity<List<Onboarding>> getAll() {
-        return ResponseEntity.ok(onboardingService.getAll());
+    public ResponseEntity<List<OnboardingResponse>> getAll() {
+        return ResponseEntity.ok(onboardingService.getAll().stream().map(OnboardingResponse::from).toList());
     }
 }
