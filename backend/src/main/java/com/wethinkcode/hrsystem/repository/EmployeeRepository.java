@@ -23,4 +23,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSp
 
     List<Employee> findByReportsToId(Long reportsToId);
     List<Employee> findByReportsToIsNull();
+    List<Employee> findByBranchIsNull();
+    boolean existsByEmployeeNumber(String employeeNumber);
 }
