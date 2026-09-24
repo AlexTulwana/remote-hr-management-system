@@ -4,6 +4,7 @@ import com.wethinkcode.hrsystem.dto.ForgotPasswordRequest;
 import com.wethinkcode.hrsystem.dto.LoginRequest;
 import com.wethinkcode.hrsystem.dto.RegisterRequest;
 import com.wethinkcode.hrsystem.dto.ResetPasswordRequest;
+import com.wethinkcode.hrsystem.model.Employee;
 import com.wethinkcode.hrsystem.model.User;
 import com.wethinkcode.hrsystem.repository.UserRepository;
 import com.wethinkcode.hrsystem.security.CurrentUserService;
@@ -136,6 +137,43 @@ class AuthServiceTest {
         assertThat(token).isEqualTo("fake-jwt-token");
     }
 
+    @Test
+    void login_withInactiveEmployee_throwsGenericException() {
+        LoginRequest request = new LoginRequest();
+        request.setUsername("hrtest2");
+        request.setPassword("correctPassword");
+
+        Employee employee = new Employee();
+        employee.setActive(false);
+        existingUser.setEmployee(employee);
+
+        when(userRepository.findByUsername("hrtest2")).thenReturn(Optional.of(existingUser));
+        when(passwordEncoder.matches("correctPassword", "encoded-password")).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Invalid username or password");
+
+        verify(jwtUtil, never()).generateToken(any(), any());
+    }
+
+    @Test
+    void login_withActiveEmployee_returnsToken() {
+        LoginRequest request = new LoginRequest();
+        request.setUsername("hrtest2");
+        request.setPassword("correctPassword");
+
+        Employee employee = new Employee();
+        employee.setActive(true);
+        existingUser.setEmployee(employee);
+
+        when(userRepository.findByUsername("hrtest2")).thenReturn(Optional.of(existingUser));
+        when(passwordEncoder.matches("correctPassword", "encoded-password")).thenReturn(true);
+        when(jwtUtil.generateToken("hrtest2", "HR")).thenReturn("fake-jwt-token");
+
+        assertThat(authService.login(request)).isEqualTo("fake-jwt-token");
+    }
+
     // --- forgotPassword ---
 
     @Test
@@ -165,7 +203,7 @@ class AuthServiceTest {
         request.setToken("valid-token");
         request.setNewPassword("newPlainPassword");
 
-        when(userRepository.findAll()).thenReturn(java.util.List.of(existingUser));
+        when(userRepository.findByResetToken("valid-token")).thenReturn(Optional.of(existingUser));
         when(passwordEncoder.encode("newPlainPassword")).thenReturn("new-encoded-password");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -185,7 +223,7 @@ class AuthServiceTest {
         request.setToken("expired-token");
         request.setNewPassword("newPlainPassword");
 
-        when(userRepository.findAll()).thenReturn(java.util.List.of(existingUser));
+        when(userRepository.findByResetToken("expired-token")).thenReturn(Optional.of(existingUser));
 
         assertThatThrownBy(() -> authService.resetPassword(request))
                 .isInstanceOf(RuntimeException.class)
@@ -198,11 +236,24 @@ class AuthServiceTest {
         request.setToken("does-not-exist");
         request.setNewPassword("newPlainPassword");
 
-        when(userRepository.findAll()).thenReturn(java.util.List.of(existingUser));
+        when(userRepository.findByResetToken("does-not-exist")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> authService.resetPassword(request))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Invalid or expired reset token");
+    }
+
+    @Test
+    void resetPassword_withNullToken_throwsWithoutLookup() {
+        ResetPasswordRequest request = new ResetPasswordRequest();
+        request.setToken(null);
+        request.setNewPassword("newPlainPassword");
+
+        assertThatThrownBy(() -> authService.resetPassword(request))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Invalid or expired reset token");
+
+        verify(userRepository, never()).findByResetToken(any());
     }
 
     // --- register rules ---
