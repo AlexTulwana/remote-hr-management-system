@@ -3,8 +3,11 @@ package com.wethinkcode.hrsystem.service;
 import com.wethinkcode.hrsystem.dto.JobPostingRequest;
 import com.wethinkcode.hrsystem.model.JobPosting;
 import com.wethinkcode.hrsystem.model.User;
+import com.wethinkcode.hrsystem.model.Branch;
+import com.wethinkcode.hrsystem.repository.BranchRepository;
 import com.wethinkcode.hrsystem.repository.JobPostingRepository;
 import com.wethinkcode.hrsystem.repository.UserRepository;
+import com.wethinkcode.hrsystem.security.CurrentUserService;
 import org.springframework.stereotype.Service;
 import com.wethinkcode.hrsystem.dto.EmailTemplateUpdateRequest;
 
@@ -17,15 +20,24 @@ public class JobPostingService {
 
     private final JobPostingRepository jobPostingRepository;
     private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
+    private final BranchRepository branchRepository;
 
-    public JobPostingService(JobPostingRepository jobPostingRepository, UserRepository userRepository) {
+    public JobPostingService(JobPostingRepository jobPostingRepository, UserRepository userRepository, CurrentUserService currentUserService, BranchRepository branchRepository) {
         this.jobPostingRepository = jobPostingRepository;
         this.userRepository = userRepository;
+        this.currentUserService = currentUserService;
+        this.branchRepository = branchRepository;
+    }
+
+    private Branch resolveBranch(Long branchId) {
+        if (branchId == null) return null;
+        return branchRepository.findById(branchId)
+                .orElseThrow(() -> new RuntimeException("Branch not found"));
     }
 
     public JobPosting create(JobPostingRequest request) {
-        User postedBy = userRepository.findById(request.getPostedById())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User postedBy = currentUserService.getCurrentUser();
 
         JobPosting posting = new JobPosting();
         posting.setTitle(request.getTitle());
@@ -36,6 +48,7 @@ public class JobPostingService {
         posting.setEndDate(request.getEndDate());
         posting.setMaxApplications(request.getMaxApplications());
         posting.setPostedBy(postedBy);
+        posting.setBranch(resolveBranch(request.getBranchId()));
         if (request.getRequiredDocuments() != null) {
             posting.setRequiredDocuments(request.getRequiredDocuments());
         }
@@ -53,6 +66,7 @@ public class JobPostingService {
         posting.setStartDate(request.getStartDate());
         posting.setEndDate(request.getEndDate());
         posting.setMaxApplications(request.getMaxApplications());
+        posting.setBranch(resolveBranch(request.getBranchId()));
         if (request.getRequiredDocuments() != null) {
             posting.setRequiredDocuments(request.getRequiredDocuments());
         }
