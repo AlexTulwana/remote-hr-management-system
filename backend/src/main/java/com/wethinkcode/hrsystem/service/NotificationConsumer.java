@@ -12,6 +12,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 @Component
@@ -66,7 +67,7 @@ public class NotificationConsumer {
                 body = applyPlaceholders(template, e.candidateName(), e.jobTitle());
             } else {
                 body = "Dear " + e.candidateName() + ",\n\n"
-                        + "Your interview has been scheduled for " + e.scheduledAt() + ".\n"
+                        + "Your interview has been scheduled for " + formatDateTime(e.scheduledAt()) + ".\n"
                         + (e.meetingLink() != null ? "Join link: " + e.meetingLink() + "\n" : "Location: " + e.location() + "\n")
                         + "\nRegards,\nHR Team";
             }
@@ -122,6 +123,11 @@ public class NotificationConsumer {
             System.out.println("CONSUMER: FAILED to send outcome email - " + ex.getClass().getName() + ": " + ex.getMessage());
             ex.printStackTrace();
         }
+    }
+
+    private String formatDateTime(java.time.LocalDateTime dt) {
+        if (dt == null) return "";
+        return dt.format(DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a"));
     }
 
     private String lookupTemplate(Long jobPostingId, java.util.function.Function<JobPosting, String> templateGetter) {
