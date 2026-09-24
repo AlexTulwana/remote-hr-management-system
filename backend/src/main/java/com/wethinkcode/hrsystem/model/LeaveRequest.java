@@ -3,6 +3,7 @@ package com.wethinkcode.hrsystem.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "leave_requests")
@@ -25,4 +26,7 @@ public class LeaveRequest {
 
     private String status = "PENDING";
     private String rejectionReason;
+
+    private String decidedByName;
+    private LocalDateTime decidedAt;
 }
