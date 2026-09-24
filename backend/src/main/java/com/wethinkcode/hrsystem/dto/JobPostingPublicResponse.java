@@ -16,7 +16,8 @@ public record JobPostingPublicResponse(
         LocalDate startDate,
         LocalDate endDate,
         Integer maxApplications,
-        List<DocumentType> requiredDocuments
+        List<DocumentType> requiredDocuments,
+        String branchName
 ) {
     public static JobPostingPublicResponse from(JobPosting p) {
         return new JobPostingPublicResponse(
@@ -28,7 +29,8 @@ public record JobPostingPublicResponse(
                 p.getStartDate(),
                 p.getEndDate(),
                 p.getMaxApplications(),
-                p.getRequiredDocuments()
+                p.getRequiredDocuments(),
+                p.getBranch() != null ? p.getBranch().getName() : null
         );
     }
 }
