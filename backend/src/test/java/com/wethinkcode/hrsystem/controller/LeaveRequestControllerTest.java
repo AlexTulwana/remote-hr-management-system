@@ -13,6 +13,11 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.wethinkcode.hrsystem.dto.LeaveBalanceResponse;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -32,6 +37,9 @@ class LeaveRequestControllerTest {
 
     @MockitoBean
     private LeaveRequestService leaveRequestService;
+
+    @TempDir
+    Path tempDir;
 
     // ---------- submit ----------
 
@@ -174,6 +182,144 @@ class LeaveRequestControllerTest {
     @Test
     void getAll_unauthenticated_returns403() throws Exception {
         mockMvc.perform(get("/api/leave"))
+                .andExpect(status().isForbidden());
+    }
+
+    // ---------- validation errors are 400, never 403 ----------
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void submit_validationFailure_returns400WithMessage() throws Exception {
+        when(leaveRequestService.submit(eq(4L), any(LeaveRequestDto.class), isNull()))
+                .thenThrow(new IllegalStateException("Not enough annual leave for 2026: requested 10 working days but only 3 remain"));
+
+        mockMvc.perform(multipart("/api/leave/4")
+                        .param("leaveType", "ANNUAL")
+                        .param("startDate", "2026-10-01")
+                        .param("endDate", "2026-10-14")
+                        .param("reason", "Too long"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Not enough annual leave for 2026: requested 10 working days but only 3 remain"));
+    }
+
+    // ---------- attachment ----------
+
+    @Test
+    @WithMockUser(roles = "HR")
+    void getAttachment_pdf_returnsInlineWithPdfContentType() throws Exception {
+        Path file = tempDir.resolve("abc123_doc.pdf");
+        Files.writeString(file, "pdf-bytes");
+        when(leaveRequestService.getAttachmentPath(9L)).thenReturn(file);
+
+        mockMvc.perform(get("/api/leave/9/attachment"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/pdf"))
+                .andExpect(header().string("Content-Disposition", "inline; filename=\"doc.pdf\""));
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void getAttachment_docx_fallsBackToOctetStream() throws Exception {
+        Path file = tempDir.resolve("abc123_note.docx");
+        Files.writeString(file, "docx-bytes");
+        when(leaveRequestService.getAttachmentPath(9L)).thenReturn(file);
+
+        mockMvc.perform(get("/api/leave/9/attachment"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/octet-stream"));
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void getAttachment_serviceThrowsAccessDenied_returns403() throws Exception {
+        when(leaveRequestService.getAttachmentPath(9L))
+                .thenThrow(new AccessDeniedException("You are not authorized to view this attachment"));
+
+        mockMvc.perform(get("/api/leave/9/attachment"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "HR")
+    void getAttachment_noAttachment_returns400() throws Exception {
+        when(leaveRequestService.getAttachmentPath(9L))
+                .thenThrow(new RuntimeException("This leave request has no attachment"));
+
+        mockMvc.perform(get("/api/leave/9/attachment"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("This leave request has no attachment"));
+    }
+
+    @Test
+    void getAttachment_unauthenticated_returns403() throws Exception {
+        mockMvc.perform(get("/api/leave/9/attachment"))
+                .andExpect(status().isForbidden());
+    }
+
+    // ---------- balances ----------
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void getBalance_success_returns200() throws Exception {
+        when(leaveRequestService.getBalance(4L)).thenReturn(
+                new LeaveBalanceResponse(4L, "EMP004", "Emma Employee", "Cape Town", 2026, 15, 5, 3, 7, 2));
+
+        mockMvc.perform(get("/api/leave/balance/4"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.allowance").value(15))
+                .andExpect(jsonPath("$.used").value(5))
+                .andExpect(jsonPath("$.reserved").value(3))
+                .andExpect(jsonPath("$.remaining").value(7))
+                .andExpect(jsonPath("$.otherDaysTaken").value(2));
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void getBalance_serviceThrowsAccessDenied_returns403() throws Exception {
+        when(leaveRequestService.getBalance(3L))
+                .thenThrow(new AccessDeniedException("You are not authorized to perform this action for this employee"));
+
+        mockMvc.perform(get("/api/leave/balance/3"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "HR")
+    void getAllBalances_asHr_returns200() throws Exception {
+        when(leaveRequestService.getAllBalances()).thenReturn(List.of(
+                new LeaveBalanceResponse(4L, "EMP004", "Emma Employee", "Cape Town", 2026, 15, 5, 3, 7, 2)));
+
+        mockMvc.perform(get("/api/leave/balances"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].fullName").value("Emma Employee"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void getAllBalances_asAdmin_returns200() throws Exception {
+        when(leaveRequestService.getAllBalances()).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/leave/balances"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "MANAGER")
+    void getAllBalances_asManager_returns403() throws Exception {
+        mockMvc.perform(get("/api/leave/balances"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void getAllBalances_asEmployee_returns403() throws Exception {
+        mockMvc.perform(get("/api/leave/balances"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getAllBalances_unauthenticated_returns403() throws Exception {
+        mockMvc.perform(get("/api/leave/balances"))
                 .andExpect(status().isForbidden());
     }
 }
