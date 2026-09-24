@@ -44,6 +44,10 @@ public class JobPosting {
     @JoinColumn(name = "posted_by")
     private User postedBy;
 
+    @ManyToOne
+    @JoinColumn(name = "branch_id")
+    private Branch branch;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "job_posting_required_documents", joinColumns = @JoinColumn(name = "job_posting_id"))
     @Column(name = "document_type")
