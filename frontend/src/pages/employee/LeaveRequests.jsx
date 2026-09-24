@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../auth/AuthContext';
-import { submitLeave, getMyLeave } from '../../api/leave';
+import { submitLeave, getMyLeave, getLeaveBalance } from '../../api/leave';
 import Card from '../../components/Card';
 import Pill from '../../components/Pill';
+import StatCard from '../../components/StatCard';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import Select from '../../components/Select';
@@ -35,6 +36,7 @@ export default function LeaveRequests() {
   const employeeId = user?.employeeId;
 
   const [leave, setLeave] = useState([]);
+  const [balance, setBalance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -60,6 +62,7 @@ export default function LeaveRequests() {
     try {
       const data = await getMyLeave(employeeId);
       setLeave(data);
+      getLeaveBalance(employeeId).then(setBalance).catch(() => setBalance(null));
     } catch {
       setError('Could not load your leave requests.');
     } finally {
@@ -108,6 +111,19 @@ export default function LeaveRequests() {
   return (
     <div>
       <p className="text-[20px] font-medium mb-5">Leave Requests</p>
+
+      {balance ? (
+        <div className="grid grid-cols-4 gap-3.5 mb-3.5">
+          <StatCard
+            label={`Annual leave remaining (${balance.year})`}
+            value={`${balance.remaining} of ${balance.allowance} days`}
+            variant={balance.remaining === 0 ? 'urgent' : 'neutral'}
+          />
+          <StatCard label="Annual days used" value={balance.used} />
+          <StatCard label="Annual days pending" value={balance.reserved} />
+          <StatCard label="Other leave taken (days)" value={balance.otherDaysTaken} />
+        </div>
+      ) : null}
 
       <Card className="mb-3.5">
         <p className="text-[15px] font-medium mb-3">Submit a request</p>
@@ -191,6 +207,12 @@ export default function LeaveRequests() {
                   {l.status === 'REJECTED' && l.rejectionReason ? (
                     <p className="text-[12px] text-danger-text mt-1">
                       Rejected: {l.rejectionReason}
+                    </p>
+                  ) : null}
+                  {l.decidedByName ? (
+                    <p className="text-[12px] text-text-secondary mt-1">
+                      {l.status === 'APPROVED' ? 'Approved' : 'Rejected'} by {l.decidedByName}
+                      {l.decidedAt ? ` on ${formatDate(l.decidedAt)}` : ''}
                     </p>
                   ) : null}
                 </div>
