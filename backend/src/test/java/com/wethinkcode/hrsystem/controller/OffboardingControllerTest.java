@@ -3,6 +3,12 @@ package com.wethinkcode.hrsystem.controller;
 import com.wethinkcode.hrsystem.model.Offboarding;
 import com.wethinkcode.hrsystem.security.JwtUtil;
 import com.wethinkcode.hrsystem.service.OffboardingService;
+import com.wethinkcode.hrsystem.model.Employee;
+import com.wethinkcode.hrsystem.model.User;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -183,5 +189,41 @@ class OffboardingControllerTest {
     void getAll_managerRole_isForbidden() throws Exception {
         mockMvc.perform(get("/api/offboarding"))
                 .andExpect(status().isForbidden());
+    }
+
+    // ---- leak regression: no Employee/User internals in the response ----
+
+    @Test
+    @WithMockUser(roles = "HR")
+    void getById_doesNotLeakSensitiveFields() throws Exception {
+        Employee employee = new Employee();
+        employee.setId(1L);
+        employee.setFullName("Emma Employee");
+        employee.setSalary(98765.0);
+        employee.setBankingDetails("BANK-SECRET-123");
+        employee.setIdNumber("ID-SECRET-456");
+
+        User performer = new User();
+        performer.setUsername("hrtest1");
+        performer.setPassword("PASSWORD-HASH-789");
+        performer.setResetToken("RESET-TOKEN-000");
+
+        Offboarding record = new Offboarding();
+        record.setId(10L);
+        record.setEmployee(employee);
+        record.setPerformedBy(performer);
+        record.setType("RESIGNATION");
+        when(offboardingService.getById(10L)).thenReturn(record);
+
+        mockMvc.perform(get("/api/offboarding/10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.employeeName").value("Emma Employee"))
+                .andExpect(jsonPath("$.performedBy").value("hrtest1"))
+                .andExpect(jsonPath("$.employee").doesNotExist())
+                .andExpect(content().string(not(containsString("98765"))))
+                .andExpect(content().string(not(containsString("BANK-SECRET-123"))))
+                .andExpect(content().string(not(containsString("ID-SECRET-456"))))
+                .andExpect(content().string(not(containsString("PASSWORD-HASH-789"))))
+                .andExpect(content().string(not(containsString("RESET-TOKEN-000"))));
     }
 }
