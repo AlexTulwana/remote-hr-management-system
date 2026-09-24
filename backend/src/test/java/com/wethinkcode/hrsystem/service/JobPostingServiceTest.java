@@ -7,6 +7,7 @@ import com.wethinkcode.hrsystem.model.JobPosting;
 import com.wethinkcode.hrsystem.model.User;
 import com.wethinkcode.hrsystem.repository.JobPostingRepository;
 import com.wethinkcode.hrsystem.repository.UserRepository;
+import com.wethinkcode.hrsystem.security.CurrentUserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,6 +28,7 @@ class JobPostingServiceTest {
 
     @Mock private JobPostingRepository jobPostingRepository;
     @Mock private UserRepository userRepository;
+    @Mock private CurrentUserService currentUserService;
 
     @InjectMocks
     private JobPostingService jobPostingService;
@@ -48,23 +50,14 @@ class JobPostingServiceTest {
         request.setStartDate(LocalDate.of(2026, 1, 1));
         request.setEndDate(LocalDate.of(2026, 2, 1));
         request.setMaxApplications(50);
-        request.setPostedById(1L);
         request.setRequiredDocuments(List.of(DocumentType.CV, DocumentType.COVER_LETTER));
     }
 
     // ---------- create() ----------
 
     @Test
-    void create_userNotFound_throwsException() {
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
-
-        assertThrows(RuntimeException.class, () -> jobPostingService.create(request));
-        verifyNoInteractions(jobPostingRepository);
-    }
-
-    @Test
     void create_success_mapsAllFields() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(poster));
+        when(currentUserService.getCurrentUser()).thenReturn(poster);
         when(jobPostingRepository.save(any(JobPosting.class))).thenAnswer(inv -> inv.getArgument(0));
 
         JobPosting result = jobPostingService.create(request);
@@ -83,7 +76,7 @@ class JobPostingServiceTest {
     @Test
     void create_nullRequiredDocuments_leavesDefaultEmptyList() {
         request.setRequiredDocuments(null);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(poster));
+        when(currentUserService.getCurrentUser()).thenReturn(poster);
         when(jobPostingRepository.save(any(JobPosting.class))).thenAnswer(inv -> inv.getArgument(0));
 
         JobPosting result = jobPostingService.create(request);
