@@ -1,6 +1,7 @@
 package com.wethinkcode.hrsystem.controller;
 
 import com.wethinkcode.hrsystem.dto.InterviewRequest;
+import com.wethinkcode.hrsystem.dto.InterviewResponse;
 import com.wethinkcode.hrsystem.model.Interview;
 import com.wethinkcode.hrsystem.service.InterviewService;
 import org.springframework.http.ResponseEntity;
@@ -22,30 +23,32 @@ public class InterviewController {
 
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<Interview> schedule(@RequestBody InterviewRequest request) {
-        return ResponseEntity.ok(interviewService.schedule(request));
+    public ResponseEntity<InterviewResponse> schedule(@RequestBody InterviewRequest request) {
+        return ResponseEntity.ok(InterviewResponse.from(interviewService.schedule(request)));
     }
 
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PatchMapping("/{id}/status")
-    public ResponseEntity<Interview> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        return ResponseEntity.ok(interviewService.updateStatus(id, body.get("status"), body.get("notes")));
+    public ResponseEntity<InterviewResponse> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(InterviewResponse.from(interviewService.updateStatus(id, body.get("status"), body.get("notes"))));
     }
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping("/{id}")
-    public ResponseEntity<Interview> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(interviewService.getById(id));
+    public ResponseEntity<InterviewResponse> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(InterviewResponse.from(interviewService.getById(id)));
     }
 
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping("/application/{applicationId}")
-    public ResponseEntity<List<Interview>> getByApplication(@PathVariable Long applicationId) {
-        return ResponseEntity.ok(interviewService.getByApplication(applicationId));
+    public ResponseEntity<List<InterviewResponse>> getByApplication(@PathVariable Long applicationId) {
+        return ResponseEntity.ok(interviewService.getByApplication(applicationId).stream()
+                .map(InterviewResponse::from).toList());
     }
 
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @GetMapping
-    public ResponseEntity<List<Interview>> getAll() {
-        return ResponseEntity.ok(interviewService.getAll());
+    public ResponseEntity<List<InterviewResponse>> getAll() {
+        return ResponseEntity.ok(interviewService.getAll().stream()
+                .map(InterviewResponse::from).toList());
     }
 }
