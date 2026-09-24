@@ -14,6 +14,6 @@ public class JobPostingRequest {
     private LocalDate startDate;
     private LocalDate endDate;
     private Integer maxApplications;
-    private Long postedById;
+    private Long branchId;
     private List<DocumentType> requiredDocuments;
 }
