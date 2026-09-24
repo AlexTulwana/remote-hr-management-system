@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
+import JobApply from './pages/public/JobApply';
 import Profile from './pages/Profile';
 import Messages from './pages/Messages';
 import Announcements from './pages/Announcements';
@@ -17,6 +18,7 @@ import TeamRequests from './pages/manager/TeamRequests';
 import TeamDisciplinary from './pages/manager/TeamDisciplinary';
 import TeamReviews from './pages/manager/TeamReviews';
 import EmployeeDirectory from './pages/hr/EmployeeDirectory';
+import Recruitment from './pages/hr/Recruitment';
 import AppLayout from './components/AppLayout';
 import ProtectedRoute from './auth/ProtectedRoute';
 import { useAuth } from './auth/AuthContext';
@@ -41,6 +43,7 @@ function navItemsFor(role) {
   }
   if (role === 'HR' || role === 'ADMIN') {
     items.push({ to: '/hr/employee-directory', label: 'Employee Directory' });
+    items.push({ to: '/hr/recruitment', label: 'Recruitment' });
   }
   items.push(
     { to: '/messages', label: 'Messages' },
@@ -58,6 +61,7 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/apply/:id" element={<JobApply />} />
       <Route
         path="/employee/dashboard"
         element={
@@ -184,6 +188,16 @@ function App() {
           <ProtectedRoute allowedRoles={['HR', 'ADMIN']}>
             <AppLayout navItems={navItems}>
               <EmployeeDirectory />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/recruitment"
+        element={
+          <ProtectedRoute allowedRoles={['HR', 'ADMIN']}>
+            <AppLayout navItems={navItems}>
+              <Recruitment />
             </AppLayout>
           </ProtectedRoute>
         }
