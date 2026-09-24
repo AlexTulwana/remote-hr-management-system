@@ -17,6 +17,10 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.mock.web.MockMultipartFile;
 
+import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
+
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -326,5 +330,115 @@ class ApplicationServiceTest {
 
         ApplicationOutcomeRequest req = new ApplicationOutcomeRequest();
         assertThrows(RuntimeException.class, () -> applicationService.setOutcome(99L, req));
+    }
+
+    // ---------- downloadCv() ----------
+
+    @Test
+    void downloadCv_fileExists_returnsResource() throws Exception {
+        Path realFile = tempDir.resolve("resume.pdf");
+        Files.writeString(realFile, "pdf bytes");
+
+        Application app = new Application();
+        app.setId(5L);
+        app.setCvPath(realFile.toString());
+        when(applicationRepository.findById(5L)).thenReturn(Optional.of(app));
+
+        Resource resource = applicationService.downloadCv(5L);
+
+        assertTrue(resource.exists());
+    }
+
+    @Test
+    void downloadCv_noCvUploaded_throwsException() {
+        Application app = new Application();
+        app.setId(5L);
+        app.setCvPath(null);
+        when(applicationRepository.findById(5L)).thenReturn(Optional.of(app));
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> applicationService.downloadCv(5L));
+        assertEquals("No CV uploaded for this application", ex.getMessage());
+    }
+
+    @Test
+    void downloadCv_fileMissingOnDisk_throwsException() {
+        Application app = new Application();
+        app.setId(5L);
+        app.setCvPath(tempDir.resolve("missing.pdf").toString());
+        when(applicationRepository.findById(5L)).thenReturn(Optional.of(app));
+
+        assertThrows(RuntimeException.class, () -> applicationService.downloadCv(5L));
+    }
+
+    // ---------- downloadDocument() ----------
+
+    @Test
+    void downloadDocument_belongsToApplication_returnsResource() throws Exception {
+        Path realFile = tempDir.resolve("id.png");
+        Files.writeString(realFile, "png bytes");
+
+        Application app = new Application();
+        app.setId(5L);
+        ApplicationDocument doc = new ApplicationDocument();
+        doc.setId(20L);
+        doc.setApplication(app);
+        doc.setFilePath(realFile.toString());
+        when(applicationDocumentRepository.findById(20L)).thenReturn(Optional.of(doc));
+
+        Resource resource = applicationService.downloadDocument(5L, 20L);
+
+        assertTrue(resource.exists());
+    }
+
+    @Test
+    void downloadDocument_belongsToDifferentApplication_throwsException() {
+        Application otherApp = new Application();
+        otherApp.setId(9L);
+        ApplicationDocument doc = new ApplicationDocument();
+        doc.setId(20L);
+        doc.setApplication(otherApp);
+        doc.setFilePath(tempDir.resolve("id.png").toString());
+        when(applicationDocumentRepository.findById(20L)).thenReturn(Optional.of(doc));
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> applicationService.downloadDocument(5L, 20L));
+        assertEquals("Document not found", ex.getMessage());
+    }
+
+    @Test
+    void downloadDocument_notFound_throwsException() {
+        when(applicationDocumentRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(RuntimeException.class, () -> applicationService.downloadDocument(5L, 99L));
+    }
+
+    // ---------- resolveContentType() ----------
+
+    @Test
+    void resolveContentType_pdf() {
+        assertEquals(MediaType.APPLICATION_PDF, applicationService.resolveContentType("cv.pdf"));
+    }
+
+    @Test
+    void resolveContentType_jpgAndJpeg() {
+        assertEquals(MediaType.IMAGE_JPEG, applicationService.resolveContentType("id.jpg"));
+        assertEquals(MediaType.IMAGE_JPEG, applicationService.resolveContentType("id.jpeg"));
+    }
+
+    @Test
+    void resolveContentType_png() {
+        assertEquals(MediaType.IMAGE_PNG, applicationService.resolveContentType("id.png"));
+    }
+
+    @Test
+    void resolveContentType_docx() {
+        assertEquals("application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                applicationService.resolveContentType("cover.docx").toString());
+    }
+
+    @Test
+    void resolveContentType_unknownExtension_fallsBackToOctetStream() {
+        assertEquals(MediaType.APPLICATION_OCTET_STREAM, applicationService.resolveContentType("mystery.xyz"));
     }
 }
