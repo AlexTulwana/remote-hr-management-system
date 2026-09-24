@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import JobApply from './pages/public/JobApply';
+import SetPassword from './pages/public/SetPassword';
 import Profile from './pages/Profile';
 import Messages from './pages/Messages';
 import Announcements from './pages/Announcements';
@@ -19,6 +20,9 @@ import TeamDisciplinary from './pages/manager/TeamDisciplinary';
 import TeamReviews from './pages/manager/TeamReviews';
 import EmployeeDirectory from './pages/hr/EmployeeDirectory';
 import Recruitment from './pages/hr/Recruitment';
+import Onboarding from './pages/hr/Onboarding';
+import Offboarding from './pages/hr/Offboarding';
+import LeaveManagement from './pages/hr/LeaveManagement';
 import AppLayout from './components/AppLayout';
 import ProtectedRoute from './auth/ProtectedRoute';
 import { useAuth } from './auth/AuthContext';
@@ -44,6 +48,9 @@ function navItemsFor(role) {
   if (role === 'HR' || role === 'ADMIN') {
     items.push({ to: '/hr/employee-directory', label: 'Employee Directory' });
     items.push({ to: '/hr/recruitment', label: 'Recruitment' });
+    items.push({ to: '/hr/onboarding', label: 'Onboarding' });
+    items.push({ to: '/hr/offboarding', label: 'Offboarding' });
+    items.push({ to: '/hr/leave-management', label: 'Leave Management' });
   }
   items.push(
     { to: '/messages', label: 'Messages' },
@@ -62,6 +69,7 @@ function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/apply/:id" element={<JobApply />} />
+      <Route path="/set-password" element={<SetPassword />} />
       <Route
         path="/employee/dashboard"
         element={
@@ -198,6 +206,36 @@ function App() {
           <ProtectedRoute allowedRoles={['HR', 'ADMIN']}>
             <AppLayout navItems={navItems}>
               <Recruitment />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/onboarding"
+        element={
+          <ProtectedRoute allowedRoles={['HR', 'ADMIN']}>
+            <AppLayout navItems={navItems}>
+              <Onboarding />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/offboarding"
+        element={
+          <ProtectedRoute allowedRoles={['HR', 'ADMIN']}>
+            <AppLayout navItems={navItems}>
+              <Offboarding />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/leave-management"
+        element={
+          <ProtectedRoute allowedRoles={['HR', 'ADMIN']}>
+            <AppLayout navItems={navItems}>
+              <LeaveManagement />
             </AppLayout>
           </ProtectedRoute>
         }
