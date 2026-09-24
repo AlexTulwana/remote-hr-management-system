@@ -8,4 +8,5 @@ import java.util.List;
 public interface OnboardingRepository extends JpaRepository<Onboarding, Long> {
     List<Onboarding> findByEmployeeId(Long employeeId);
     List<Onboarding> findByStatus(String status);
+    boolean existsByApplicationId(Long applicationId);
 }
