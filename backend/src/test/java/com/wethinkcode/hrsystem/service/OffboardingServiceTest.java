@@ -152,7 +152,7 @@ class OffboardingServiceTest {
 
     @Test
     void complete_resignation_updatesEmployeeCorrectly() {
-        LocalDate effective = LocalDate.of(2026, 10, 1);
+        LocalDate effective = LocalDate.now().minusDays(1);
         Offboarding offboarding = new Offboarding();
         offboarding.setId(5L);
         offboarding.setEmployee(employee);
@@ -178,7 +178,7 @@ class OffboardingServiceTest {
 
     @Test
     void complete_termination_updatesEmployeeCorrectly() {
-        LocalDate effective = LocalDate.of(2026, 10, 1);
+        LocalDate effective = LocalDate.now().minusDays(1);
         Offboarding offboarding = new Offboarding();
         offboarding.setId(6L);
         offboarding.setEmployee(employee);
@@ -198,6 +198,132 @@ class OffboardingServiceTest {
         assertEquals("TERMINATED", employee.getEmploymentStatus());
         assertEquals(effective, employee.getTerminationDate());
         assertNull(employee.getResignationDate());
+    }
+
+    @Test
+    void start_scheduledOffboardingExists_throwsException() {
+        when(employeeRepository.findById(1L)).thenReturn(Optional.of(employee));
+
+        Offboarding existing = new Offboarding();
+        existing.setStatus("SCHEDULED");
+        when(offboardingRepository.findByEmployeeId(1L)).thenReturn(List.of(existing));
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> offboardingService.start(1L, "RESIGNATION", LocalDate.now(), "reason"));
+
+        assertTrue(ex.getMessage().contains("already in progress"));
+        verify(offboardingRepository, never()).save(any());
+    }
+
+    @Test
+    void complete_futureDate_schedulesAndLeavesEmployeeUntouched() {
+        Offboarding offboarding = new Offboarding();
+        offboarding.setId(10L);
+        offboarding.setEmployee(employee);
+        offboarding.setType("TERMINATION");
+        offboarding.setEffectiveDate(LocalDate.now().plusDays(5));
+        offboarding.setStatus("IN_PROGRESS");
+
+        when(offboardingRepository.findById(10L)).thenReturn(Optional.of(offboarding));
+        when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+        when(offboardingRepository.save(any(Offboarding.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Offboarding result = offboardingService.complete(10L);
+
+        assertEquals("SCHEDULED", result.getStatus());
+        assertTrue(employee.isActive());
+        assertEquals("ACTIVE", employee.getEmploymentStatus());
+        assertNull(employee.getTerminationDate());
+        verify(employeeRepository, never()).save(any());
+    }
+
+    @Test
+    void complete_effectiveToday_appliesImmediately() {
+        Offboarding offboarding = new Offboarding();
+        offboarding.setId(11L);
+        offboarding.setEmployee(employee);
+        offboarding.setType("RESIGNATION");
+        offboarding.setEffectiveDate(LocalDate.now());
+        offboarding.setStatus("IN_PROGRESS");
+
+        when(offboardingRepository.findById(11L)).thenReturn(Optional.of(offboarding));
+        when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+        when(employeeRepository.save(any(Employee.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(offboardingRepository.save(any(Offboarding.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Offboarding result = offboardingService.complete(11L);
+
+        assertEquals("COMPLETE", result.getStatus());
+        assertFalse(employee.isActive());
+        assertEquals("RESIGNED", employee.getEmploymentStatus());
+    }
+
+    @Test
+    void complete_alreadyComplete_throwsAndChangesNothing() {
+        Offboarding offboarding = new Offboarding();
+        offboarding.setId(12L);
+        offboarding.setEmployee(employee);
+        offboarding.setStatus("COMPLETE");
+        when(offboardingRepository.findById(12L)).thenReturn(Optional.of(offboarding));
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> offboardingService.complete(12L));
+
+        assertEquals("Offboarding is already COMPLETE", ex.getMessage());
+        verify(employeeRepository, never()).save(any());
+        verify(offboardingRepository, never()).save(any());
+    }
+
+    @Test
+    void complete_alreadyScheduled_throwsAndChangesNothing() {
+        Offboarding offboarding = new Offboarding();
+        offboarding.setId(13L);
+        offboarding.setEmployee(employee);
+        offboarding.setStatus("SCHEDULED");
+        when(offboardingRepository.findById(13L)).thenReturn(Optional.of(offboarding));
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> offboardingService.complete(13L));
+
+        assertEquals("Offboarding is already SCHEDULED", ex.getMessage());
+        verify(employeeRepository, never()).save(any());
+        verify(offboardingRepository, never()).save(any());
+    }
+
+    // ---------- applyDueOffboardings() ----------
+
+    @Test
+    void applyDueOffboardings_deactivatesEachDueEmployee() {
+        Offboarding due = new Offboarding();
+        due.setId(20L);
+        due.setEmployee(employee);
+        due.setType("RESIGNATION");
+        due.setEffectiveDate(LocalDate.now().minusDays(1));
+        due.setStatus("SCHEDULED");
+
+        when(offboardingRepository.findByStatusAndEffectiveDateLessThanEqual(eq("SCHEDULED"), any(LocalDate.class)))
+                .thenReturn(List.of(due));
+        when(employeeRepository.save(any(Employee.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(offboardingRepository.save(any(Offboarding.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        int count = offboardingService.applyDueOffboardings();
+
+        assertEquals(1, count);
+        assertEquals("COMPLETE", due.getStatus());
+        assertFalse(employee.isActive());
+        assertEquals("RESIGNED", employee.getEmploymentStatus());
+        assertEquals(due.getEffectiveDate(), employee.getResignationDate());
+    }
+
+    @Test
+    void applyDueOffboardings_nothingDue_changesNothing() {
+        when(offboardingRepository.findByStatusAndEffectiveDateLessThanEqual(eq("SCHEDULED"), any(LocalDate.class)))
+                .thenReturn(List.of());
+
+        int count = offboardingService.applyDueOffboardings();
+
+        assertEquals(0, count);
+        verify(employeeRepository, never()).save(any());
     }
 
     // ---------- getById() ----------
