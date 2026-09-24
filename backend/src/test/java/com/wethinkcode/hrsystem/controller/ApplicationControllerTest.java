@@ -11,11 +11,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -208,5 +211,67 @@ class ApplicationControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden());
+    }
+
+    // ---- PROTECTED: downloadCv (HR/ADMIN) ----
+
+    @Test
+    void downloadCv_unauthenticated_isRejected() throws Exception {
+        mockMvc.perform(get("/api/applications/1/cv"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MANAGER")
+    void downloadCv_managerRole_isForbidden() throws Exception {
+        mockMvc.perform(get("/api/applications/1/cv"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "HR")
+    void downloadCv_hrRole_isAllowed() throws Exception {
+        Resource resource = new ByteArrayResource("pdf bytes".getBytes(StandardCharsets.UTF_8)) {
+            @Override
+            public String getFilename() {
+                return "resume.pdf";
+            }
+        };
+        when(applicationService.downloadCv(1L)).thenReturn(resource);
+        when(applicationService.resolveContentType("resume.pdf")).thenReturn(MediaType.APPLICATION_PDF);
+
+        mockMvc.perform(get("/api/applications/1/cv"))
+                .andExpect(status().isOk());
+    }
+
+    // ---- PROTECTED: downloadDocument (HR/ADMIN) ----
+
+    @Test
+    void downloadDocument_unauthenticated_isRejected() throws Exception {
+        mockMvc.perform(get("/api/applications/1/documents/20/download"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "EMPLOYEE")
+    void downloadDocument_employeeRole_isForbidden() throws Exception {
+        mockMvc.perform(get("/api/applications/1/documents/20/download"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void downloadDocument_adminRole_isAllowed() throws Exception {
+        Resource resource = new ByteArrayResource("png bytes".getBytes(StandardCharsets.UTF_8)) {
+            @Override
+            public String getFilename() {
+                return "id.png";
+            }
+        };
+        when(applicationService.downloadDocument(1L, 20L)).thenReturn(resource);
+        when(applicationService.resolveContentType("id.png")).thenReturn(MediaType.IMAGE_PNG);
+
+        mockMvc.perform(get("/api/applications/1/documents/20/download"))
+                .andExpect(status().isOk());
     }
 }
