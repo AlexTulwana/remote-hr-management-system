@@ -1,5 +1,8 @@
 package com.wethinkcode.hrsystem.controller;
 
+import com.wethinkcode.hrsystem.dto.ManagerOptionResponse;
+import com.wethinkcode.hrsystem.dto.OnboardingCandidateResponse;
+import com.wethinkcode.hrsystem.dto.OnboardingFromApplicationRequest;
 import com.wethinkcode.hrsystem.dto.OnboardingResponse;
 import com.wethinkcode.hrsystem.service.OnboardingService;
 import org.springframework.http.ResponseEntity;
@@ -41,6 +44,32 @@ public class OnboardingController {
     @GetMapping("/employee/{employeeId}")
     public ResponseEntity<List<OnboardingResponse>> getByEmployee(@PathVariable Long employeeId) {
         return ResponseEntity.ok(onboardingService.getByEmployee(employeeId).stream().map(OnboardingResponse::from).toList());
+    }
+
+    @GetMapping("/candidates")
+    public ResponseEntity<List<OnboardingCandidateResponse>> getCandidates() {
+        return ResponseEntity.ok(onboardingService.getCandidates().stream()
+                .map(OnboardingCandidateResponse::from).toList());
+    }
+
+    @GetMapping("/managers")
+    public ResponseEntity<List<ManagerOptionResponse>> getManagerOptions() {
+        return ResponseEntity.ok(onboardingService.getManagerOptions().stream()
+                .map(ManagerOptionResponse::from).toList());
+    }
+
+    @PostMapping("/from-application/{applicationId}")
+    public ResponseEntity<OnboardingResponse> startFromApplication(@PathVariable Long applicationId,
+                                                                   @RequestBody OnboardingFromApplicationRequest request) {
+        return ResponseEntity.ok(OnboardingResponse.from(onboardingService.startFromApplication(
+                applicationId, request.getRole(), request.getStartDate(),
+                request.getReportsToId(), request.getNotes())));
+    }
+
+    @PostMapping("/{id}/resend-invite")
+    public ResponseEntity<Map<String, String>> resendInvite(@PathVariable Long id) {
+        onboardingService.resendInvite(id);
+        return ResponseEntity.ok(Map.of("message", "Invite sent"));
     }
 
     @GetMapping
