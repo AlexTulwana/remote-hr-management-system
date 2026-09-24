@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
     List<Application> findByJobPostingId(Long jobPostingId);
     List<Application> findByStatus(String status);
+    List<Application> findByOutcome(String outcome);
     long countByJobPostingId(Long jobPostingId);
 
     List<Application> findBySubmittedAtBetween(LocalDateTime start, LocalDateTime end);
