@@ -20,7 +20,12 @@ import com.wethinkcode.hrsystem.dto.ApplicationOutcomeChangedEvent;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
 
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.MediaType;
+
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -175,6 +180,48 @@ public class ApplicationService {
         }
 
         return saved;
+    }
+
+    public Resource downloadCv(Long applicationId) {
+        Application application = getById(applicationId);
+        if (application.getCvPath() == null) {
+            throw new RuntimeException("No CV uploaded for this application");
+        }
+        return loadResource(application.getCvPath());
+    }
+
+    public Resource downloadDocument(Long applicationId, Long documentId) {
+        ApplicationDocument doc = applicationDocumentRepository.findById(documentId)
+                .orElseThrow(() -> new RuntimeException("Document not found"));
+        if (doc.getApplication() == null || !doc.getApplication().getId().equals(applicationId)) {
+            throw new RuntimeException("Document not found");
+        }
+        return loadResource(doc.getFilePath());
+    }
+
+    private Resource loadResource(String path) {
+        try {
+            Path filePath = Paths.get(path);
+            Resource resource = new UrlResource(filePath.toUri());
+            if (resource.exists()) {
+                return resource;
+            }
+            throw new RuntimeException("File not found: " + path);
+        } catch (MalformedURLException e) {
+            throw new RuntimeException("Error loading file: " + e.getMessage());
+        }
+    }
+
+    public MediaType resolveContentType(String filename) {
+        String lower = filename == null ? "" : filename.toLowerCase();
+        if (lower.endsWith(".pdf")) return MediaType.APPLICATION_PDF;
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return MediaType.IMAGE_JPEG;
+        if (lower.endsWith(".png")) return MediaType.IMAGE_PNG;
+        if (lower.endsWith(".doc")) return MediaType.valueOf("application/msword");
+        if (lower.endsWith(".docx")) {
+            return MediaType.valueOf("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        }
+        return MediaType.APPLICATION_OCTET_STREAM;
     }
 
     private String saveFile(MultipartFile file, String targetDir, List<String> allowedExtensions) {
