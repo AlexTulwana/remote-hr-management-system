@@ -6,6 +6,7 @@ import com.wethinkcode.hrsystem.model.User;
 import com.wethinkcode.hrsystem.repository.EmployeeRepository;
 import com.wethinkcode.hrsystem.repository.OffboardingRepository;
 import com.wethinkcode.hrsystem.security.CurrentUserService;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -15,7 +16,7 @@ import java.util.List;
 public class OffboardingService {
 
     private static final List<String> VALID_TYPES = List.of("RESIGNATION", "TERMINATION");
-    private static final List<String> VALID_STATUSES = List.of("IN_PROGRESS", "COMPLETE");
+    private static final List<String> VALID_STATUSES = List.of("IN_PROGRESS", "SCHEDULED", "COMPLETE");
 
     private final OffboardingRepository offboardingRepository;
     private final EmployeeRepository employeeRepository;
@@ -38,7 +39,8 @@ public class OffboardingService {
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
         boolean alreadyInProgress = offboardingRepository.findByEmployeeId(employeeId)
-                .stream().anyMatch(o -> "IN_PROGRESS".equals(o.getStatus()));
+                .stream().anyMatch(o -> "IN_PROGRESS".equals(o.getStatus())
+                        || "SCHEDULED".equals(o.getStatus()));
         if (alreadyInProgress) {
             throw new RuntimeException("Offboarding is already in progress for this employee");
         }
@@ -63,8 +65,41 @@ public class OffboardingService {
 
     public Offboarding complete(Long offboardingId) {
         Offboarding offboarding = getById(offboardingId);
-        offboarding.setStatus("COMPLETE");
+        if (!"IN_PROGRESS".equals(offboarding.getStatus())) {
+            throw new RuntimeException("Offboarding is already " + offboarding.getStatus());
+        }
 
+        String username = currentUserService.getCurrentUser().getUsername();
+        LocalDate effectiveDate = offboarding.getEffectiveDate();
+
+        if (effectiveDate == null || !effectiveDate.isAfter(LocalDate.now())) {
+            Offboarding saved = applyOffboarding(offboarding);
+            System.out.println("AUDIT: " + username + " completed offboarding for "
+                    + offboarding.getEmployee().getFullName());
+            return saved;
+        }
+
+        offboarding.setStatus("SCHEDULED");
+        Offboarding saved = offboardingRepository.save(offboarding);
+        System.out.println("AUDIT: " + username + " scheduled offboarding for "
+                + offboarding.getEmployee().getFullName() + ", takes effect " + effectiveDate);
+        return saved;
+    }
+
+    @Scheduled(cron = "0 1 0 * * *")
+    public int applyDueOffboardings() {
+        List<Offboarding> due = offboardingRepository
+                .findByStatusAndEffectiveDateLessThanEqual("SCHEDULED", LocalDate.now());
+
+        for (Offboarding offboarding : due) {
+            applyOffboarding(offboarding);
+            System.out.println("AUDIT: scheduled offboarding applied for "
+                    + offboarding.getEmployee().getFullName() + ", effective " + offboarding.getEffectiveDate());
+        }
+        return due.size();
+    }
+
+    private Offboarding applyOffboarding(Offboarding offboarding) {
         Employee employee = offboarding.getEmployee();
         employee.setActive(false);
         if ("RESIGNATION".equals(offboarding.getType())) {
@@ -76,12 +111,8 @@ public class OffboardingService {
         }
         employeeRepository.save(employee);
 
-        Offboarding saved = offboardingRepository.save(offboarding);
-
-        System.out.println("AUDIT: " + currentUserService.getCurrentUser().getUsername()
-                + " completed offboarding for " + employee.getFullName());
-
-        return saved;
+        offboarding.setStatus("COMPLETE");
+        return offboardingRepository.save(offboarding);
     }
 
     public Offboarding getById(Long id) {
