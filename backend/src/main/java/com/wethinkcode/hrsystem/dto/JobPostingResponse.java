@@ -21,7 +21,9 @@ public record JobPostingResponse(
         String interviewInviteEmailTemplate,
         String acceptedEmailTemplate,
         Long postedById,
-        String postedByName
+        String postedByName,
+        Long branchId,
+        String branchName
 ) {
     public static JobPostingResponse from(JobPosting p) {
         var postedBy = p.getPostedBy();
@@ -44,7 +46,9 @@ public record JobPostingResponse(
                 p.getInterviewInviteEmailTemplate(),
                 p.getAcceptedEmailTemplate(),
                 postedBy != null ? postedBy.getId() : null,
-                postedByName
+                postedByName,
+                p.getBranch() != null ? p.getBranch().getId() : null,
+                p.getBranch() != null ? p.getBranch().getName() : null
         );
     }
 }
