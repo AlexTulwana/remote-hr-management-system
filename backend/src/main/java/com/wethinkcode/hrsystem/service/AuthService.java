@@ -66,6 +66,10 @@ public class AuthService {
             throw new RuntimeException("Invalid username or password");
         }
 
+        if (user.getEmployee() != null && !user.getEmployee().isActive()) {
+            throw new RuntimeException("Invalid username or password");
+        }
+
         return jwtUtil.generateToken(user.getUsername(), user.getRole());
     }
 
@@ -92,9 +96,11 @@ public class AuthService {
     }
 
     public void resetPassword(ResetPasswordRequest request) {
-        User user = userRepository.findAll().stream()
-                .filter(u -> request.getToken().equals(u.getResetToken()))
-                .findFirst()
+        if (request.getToken() == null || request.getToken().isBlank()) {
+            throw new RuntimeException("Invalid or expired reset token");
+        }
+
+        User user = userRepository.findByResetToken(request.getToken())
                 .orElseThrow(() -> new RuntimeException("Invalid or expired reset token"));
 
         if (user.getResetTokenExpiry() == null || user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
