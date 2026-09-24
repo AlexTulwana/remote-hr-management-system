@@ -1,6 +1,7 @@
 package com.wethinkcode.hrsystem.service;
 
 import com.wethinkcode.hrsystem.dto.ApplicationOutcomeChangedEvent;
+import com.wethinkcode.hrsystem.dto.EmployeeInviteEvent;
 import com.wethinkcode.hrsystem.dto.HearingScheduledEvent;
 import com.wethinkcode.hrsystem.dto.InterviewScheduledEvent;
 import com.wethinkcode.hrsystem.config.RabbitMQConfig;
@@ -8,6 +9,7 @@ import com.wethinkcode.hrsystem.model.JobPosting;
 import com.wethinkcode.hrsystem.repository.JobPostingRepository;
 import org.springframework.amqp.rabbit.annotation.RabbitHandler;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
@@ -21,6 +23,9 @@ public class NotificationConsumer {
 
     private final JavaMailSender mailSender;
     private final JobPostingRepository jobPostingRepository;
+
+    @Value("${app.frontend-base-url:http://localhost:5173}")
+    private String frontendBaseUrl = "http://localhost:5173";
 
     public NotificationConsumer(JavaMailSender mailSender, JobPostingRepository jobPostingRepository) {
         this.mailSender = mailSender;
@@ -121,6 +126,33 @@ public class NotificationConsumer {
             System.out.println("CONSUMER: outcome email sent successfully to " + e.candidateEmail());
         } catch (Exception ex) {
             System.out.println("CONSUMER: FAILED to send outcome email - " + ex.getClass().getName() + ": " + ex.getMessage());
+            ex.printStackTrace();
+        }
+    }
+
+    @RabbitHandler
+    public void handleEmployeeInvite(EmployeeInviteEvent e) {
+        System.out.println("CONSUMER: handling EmployeeInviteEvent for " + e.fullName());
+        try {
+            if (e.email() == null || e.email().isBlank()) {
+                System.out.println("Skipping invite email - no address for " + e.fullName());
+                return;
+            }
+            String link = frontendBaseUrl + "/set-password?token=" + e.token();
+
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(e.email());
+            message.setSubject("Welcome - set up your HR account");
+            message.setText("Dear " + e.fullName() + ",\n\n"
+                    + "Welcome to the team. Your HR account has been created.\n\n"
+                    + "Username: " + e.email() + "\n"
+                    + "Set your password here (link valid until " + formatDateTime(e.expiresAt()) + "):\n"
+                    + link + "\n\n"
+                    + "Regards,\nHR Team");
+            mailSender.send(message);
+            System.out.println("CONSUMER: invite email sent successfully to " + e.email());
+        } catch (Exception ex) {
+            System.out.println("CONSUMER: FAILED to send invite email - " + ex.getClass().getName() + ": " + ex.getMessage());
             ex.printStackTrace();
         }
     }
