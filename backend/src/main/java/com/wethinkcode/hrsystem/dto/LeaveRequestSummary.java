@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
@@ -16,6 +17,8 @@ public class LeaveRequestSummary {
     private String status;
     private String rejectionReason;
     private boolean hasAttachment;
+    private String decidedByName;
+    private LocalDateTime decidedAt;
     private EmployeeSummary employee;
 
     public static LeaveRequestSummary from(com.wethinkcode.hrsystem.model.LeaveRequest r) {
@@ -28,6 +31,8 @@ public class LeaveRequestSummary {
                 r.getStatus(),
                 r.getRejectionReason(),
                 r.getAttachmentPath() != null,
+                r.getDecidedByName(),
+                r.getDecidedAt(),
                 r.getEmployee() != null ? EmployeeSummary.from(r.getEmployee()) : null
         );
     }
