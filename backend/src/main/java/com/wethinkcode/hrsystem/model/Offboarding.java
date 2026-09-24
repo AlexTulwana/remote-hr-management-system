@@ -29,7 +29,7 @@ public class Offboarding {
     @Column(length = 2000)
     private String reason;
 
-    private String status = "IN_PROGRESS"; // IN_PROGRESS, COMPLETE
+    private String status = "IN_PROGRESS"; // IN_PROGRESS, SCHEDULED, COMPLETE
 
     private LocalDateTime createdAt = LocalDateTime.now();
 }
