@@ -23,11 +23,14 @@ import EmployeeDirectory from './pages/hr/EmployeeDirectory';
 import Recruitment from './pages/hr/Recruitment';
 import Onboarding from './pages/hr/Onboarding';
 import Offboarding from './pages/hr/Offboarding';
+import PayslipManagement from './pages/hr/PayslipManagement';
 import LeaveManagement from './pages/hr/LeaveManagement';
 import HrDisciplinaryCases from './pages/hr/HrDisciplinaryCases';
 import HrHearings from './pages/hr/HrHearings';
 import HrEscalations from './pages/hr/HrEscalations';
 import HrPerformanceReviews from './pages/hr/HrPerformanceReviews';
+import HrEmployeeRequests from './pages/hr/HrEmployeeRequests';
+import Branches from './pages/hr/Branches';
 import ReportConcern from './pages/ReportConcern';
 import AppLayout from './components/AppLayout';
 import ProtectedRoute from './auth/ProtectedRoute';
@@ -57,11 +60,15 @@ function navItemsFor(role) {
     items.push({ to: '/hr/recruitment', label: 'Recruitment' });
     items.push({ to: '/hr/onboarding', label: 'Onboarding' });
     items.push({ to: '/hr/offboarding', label: 'Offboarding' });
+    items.push({ to: '/hr/payslip-management', label: 'Payslip Management' });
     items.push({ to: '/hr/leave-management', label: 'Leave Management' });
     items.push({ to: '/hr/disciplinary-cases', label: 'Disciplinary Cases' });
     items.push({ to: '/hr/hearings', label: 'Hearings' });
     items.push({ to: '/hr/escalations', label: 'Escalations' });
     items.push({ to: '/hr/performance-reviews', label: 'Performance Reviews' });
+    items.push({ to: '/hr/employee-requests', label: 'Employee Requests' });
+    items.push({ to: '/hr/my-requests', label: 'My Requests' });
+    items.push({ to: '/hr/branches', label: 'Branches' });
   }
   items.push(
     { to: '/report-concern', label: 'Report a Concern' },
@@ -253,11 +260,51 @@ function App() {
         }
       />
       <Route
+        path="/hr/payslip-management"
+        element={
+          <ProtectedRoute allowedRoles={['HR', 'ADMIN']}>
+            <AppLayout navItems={navItems}>
+              <PayslipManagement />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/hr/leave-management"
         element={
           <ProtectedRoute allowedRoles={['HR', 'ADMIN']}>
             <AppLayout navItems={navItems}>
               <LeaveManagement />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/employee-requests"
+        element={
+          <ProtectedRoute allowedRoles={['HR', 'ADMIN']}>
+            <AppLayout navItems={navItems}>
+              <HrEmployeeRequests />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/my-requests"
+        element={
+          <ProtectedRoute allowedRoles={['HR', 'ADMIN']}>
+            <AppLayout navItems={navItems}>
+              <MyRequests />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/branches"
+        element={
+          <ProtectedRoute allowedRoles={['HR', 'ADMIN']}>
+            <AppLayout navItems={navItems}>
+              <Branches />
             </AppLayout>
           </ProtectedRoute>
         }
