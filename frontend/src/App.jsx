@@ -31,53 +31,63 @@ import HrEscalations from './pages/hr/HrEscalations';
 import HrPerformanceReviews from './pages/hr/HrPerformanceReviews';
 import HrEmployeeRequests from './pages/hr/HrEmployeeRequests';
 import Branches from './pages/hr/Branches';
+import ExecutiveOverview from './pages/executive/ExecutiveOverview';
+import TurnoverAnalytics from './pages/executive/TurnoverAnalytics';
 import ReportConcern from './pages/ReportConcern';
 import AppLayout from './components/AppLayout';
 import ProtectedRoute from './auth/ProtectedRoute';
 import { useAuth } from './auth/AuthContext';
 
 function navItemsFor(role) {
-  const items = [{ to: '/profile', label: 'Profile' }];
+  const pinned = [{ to: '/profile', label: 'Profile' }];
+  const rest = [];
+
   if (role === 'EMPLOYEE') {
-    items.push({ to: '/employee/dashboard', label: 'Dashboard' });
-    items.push({ to: '/employee/leave-requests', label: 'Leave Requests' });
-    items.push({ to: '/employee/attendance', label: 'Attendance' });
-    items.push({ to: '/employee/my-requests', label: 'My Requests' });
-    items.push({ to: '/employee/payslips', label: 'Payslips' });
-    items.push({ to: '/employee/performance-reviews', label: 'Performance Reviews' });
+    rest.push({ to: '/employee/dashboard', label: 'Dashboard' });
+    rest.push({ to: '/employee/leave-requests', label: 'Leave Requests' });
+    rest.push({ to: '/employee/attendance', label: 'Attendance' });
+    rest.push({ to: '/employee/my-requests', label: 'My Requests' });
+    rest.push({ to: '/employee/payslips', label: 'Payslips' });
+    rest.push({ to: '/employee/performance-reviews', label: 'Performance Reviews' });
   }
   if (role === 'MANAGER') {
-    items.push({ to: '/manager/dashboard', label: 'Dashboard' });
-    items.push({ to: '/manager/my-team', label: 'My Team' });
-    items.push({ to: '/manager/leave-approvals', label: 'Leave Approvals' });
-    items.push({ to: '/manager/team-requests', label: 'Team Requests' });
-    items.push({ to: '/manager/disciplinary-cases', label: 'Disciplinary Cases' });
-    items.push({ to: '/manager/performance-reviews', label: 'Performance Reviews' });
-    items.push({ to: '/manager/my-requests', label: 'My Requests' });
+    rest.push({ to: '/manager/dashboard', label: 'Dashboard' });
+    rest.push({ to: '/manager/my-team', label: 'My Team' });
+    rest.push({ to: '/manager/leave-approvals', label: 'Leave Approvals' });
+    rest.push({ to: '/manager/team-requests', label: 'Team Requests' });
+    rest.push({ to: '/manager/disciplinary-cases', label: 'Disciplinary Cases' });
+    rest.push({ to: '/manager/performance-reviews', label: 'Performance Reviews' });
+    rest.push({ to: '/manager/my-requests', label: 'My Requests' });
   }
   if (role === 'HR' || role === 'ADMIN') {
-    items.push({ to: '/hr/employee-directory', label: 'Employee Directory' });
-    items.push({ to: '/hr/recruitment', label: 'Recruitment' });
-    items.push({ to: '/hr/onboarding', label: 'Onboarding' });
-    items.push({ to: '/hr/offboarding', label: 'Offboarding' });
-    items.push({ to: '/hr/payslip-management', label: 'Payslip Management' });
-    items.push({ to: '/hr/leave-management', label: 'Leave Management' });
-    items.push({ to: '/hr/disciplinary-cases', label: 'Disciplinary Cases' });
-    items.push({ to: '/hr/hearings', label: 'Hearings' });
-    items.push({ to: '/hr/escalations', label: 'Escalations' });
-    items.push({ to: '/hr/performance-reviews', label: 'Performance Reviews' });
-    items.push({ to: '/hr/employee-requests', label: 'Employee Requests' });
-    items.push({ to: '/hr/my-requests', label: 'My Requests' });
-    items.push({ to: '/hr/branches', label: 'Branches' });
+    rest.push({ to: '/hr/employee-directory', label: 'Employee Directory' });
+    rest.push({ to: '/hr/recruitment', label: 'Recruitment' });
+    rest.push({ to: '/hr/onboarding', label: 'Onboarding' });
+    rest.push({ to: '/hr/offboarding', label: 'Offboarding' });
+    rest.push({ to: '/hr/payslip-management', label: 'Payslip Management' });
+    rest.push({ to: '/hr/leave-management', label: 'Leave Management' });
+    rest.push({ to: '/hr/disciplinary-cases', label: 'Disciplinary Cases' });
+    rest.push({ to: '/hr/hearings', label: 'Hearings' });
+    rest.push({ to: '/hr/escalations', label: 'Escalations' });
+    rest.push({ to: '/hr/performance-reviews', label: 'Performance Reviews' });
+    rest.push({ to: '/hr/employee-requests', label: 'Employee Requests' });
+    rest.push({ to: '/hr/my-requests', label: 'My Requests' });
+    rest.push({ to: '/hr/branches', label: 'Branches' });
   }
-  items.push(
+  if (role === 'ADMIN') {
+    rest.push({ to: '/executive/overview', label: 'Executive Overview' });
+    rest.push({ to: '/executive/turnover-analytics', label: 'Turnover & Analytics' });
+  }
+  rest.push(
     { to: '/report-concern', label: 'Report a Concern' },
     { to: '/messages', label: 'Messages' },
     { to: '/announcements', label: 'Announcements' },
     { to: '/calendar', label: 'Calendar' },
     { to: '/documents', label: 'Documents' },
   );
-  return items;
+
+  rest.sort((a, b) => a.label.localeCompare(b.label));
+  return [...pinned, ...rest];
 }
 
 function App() {
@@ -345,6 +355,26 @@ function App() {
           <ProtectedRoute allowedRoles={['HR', 'ADMIN']}>
             <AppLayout navItems={navItems}>
               <HrPerformanceReviews />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/executive/overview"
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AppLayout navItems={navItems}>
+              <ExecutiveOverview />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/executive/turnover-analytics"
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AppLayout navItems={navItems}>
+              <TurnoverAnalytics />
             </AppLayout>
           </ProtectedRoute>
         }
