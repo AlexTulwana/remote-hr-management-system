@@ -1,7 +1,29 @@
-import { apiFetch, apiFetchBlob } from './client';
+import { apiFetch, apiFetchBlob, apiFetchFormData } from './client';
 
 export function getMyPayslips(employeeId) {
   return apiFetch(`/api/payslips/employee/${employeeId}`);
+}
+
+export function getAllPayslips() {
+  return apiFetch('/api/payslips');
+}
+
+export function uploadPayslip(employeeId, payPeriod, file) {
+  const formData = new FormData();
+  formData.append('payPeriod', payPeriod);
+  formData.append('file', file);
+  return apiFetchFormData(`/api/payslips/${employeeId}`, formData);
+}
+
+export function bulkUploadPayslips(payPeriod, files) {
+  const formData = new FormData();
+  formData.append('payPeriod', payPeriod);
+  files.forEach((file) => formData.append('files', file));
+  return apiFetchFormData('/api/payslips/bulk', formData);
+}
+
+export function deletePayslip(id) {
+  return apiFetch(`/api/payslips/${id}`, { method: 'DELETE' });
 }
 
 export async function downloadPayslip(id, fileName) {
