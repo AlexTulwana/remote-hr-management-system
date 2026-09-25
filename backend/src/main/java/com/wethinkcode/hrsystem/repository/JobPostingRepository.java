@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
     List<JobPosting> findByDepartment(String department);
+    long countByBranchId(Long branchId);
 }
