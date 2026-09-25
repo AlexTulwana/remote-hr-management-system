@@ -143,8 +143,11 @@ public class EmployeeRequestService {
         User hrUser = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (!"ESCALATED".equals(request.getStatus())) {
-            throw new RuntimeException("Only escalated requests can be given a final HR decision");
+        boolean escalated = "ESCALATED".equals(request.getStatus());
+        boolean pendingBranchless = "PENDING".equals(request.getStatus())
+                && (request.getEmployee() == null || request.getEmployee().getBranch() == null);
+        if (!escalated && !pendingBranchless) {
+            throw new RuntimeException("Only escalated requests, or pending requests from staff with no branch, can be given a final HR decision");
         }
 
         if (!"APPROVED".equals(decision) && !"REJECTED".equals(decision)) {
