@@ -232,7 +232,7 @@ class EmployeeRequestServiceTest {
                 )
         )
                 .isInstanceOf(RuntimeException.class)
-                .hasMessage("Only escalated requests can be given a final HR decision");
+                .hasMessage("Only escalated requests, or pending requests from staff with no branch, can be given a final HR decision");
     }
 
     @Test
@@ -249,6 +249,40 @@ class EmployeeRequestServiceTest {
         )
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Invalid decision: ESCALATED");
+    }
+
+    @Test
+    void hrDecision_pendingRequestFromBranchlessStaff_isDecided() {
+        Employee branchless = new Employee();
+        branchless.setId(9L);
+        pendingRequest.setEmployee(branchless);
+        pendingRequest.setStatus("PENDING");
+
+        when(employeeRequestRepository.findById(1L)).thenReturn(Optional.of(pendingRequest));
+        when(userRepository.findByUsername("hrtest2")).thenReturn(Optional.of(hrUser));
+        when(employeeRequestRepository.save(any(EmployeeRequest.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        EmployeeRequest result = employeeRequestService.hrDecision(1L, "APPROVED", "ok", "hrtest2");
+
+        assertThat(result.getStatus()).isEqualTo("APPROVED");
+        assertThat(result.getHrComment()).isEqualTo("ok");
+        assertThat(result.getHandledBy()).isEqualTo(hrUser);
+        assertThat(result.getResolvedAt()).isNotNull();
+    }
+
+    @Test
+    void hrDecision_escalatedRequest_isDecided() {
+        pendingRequest.setStatus("ESCALATED");
+
+        when(employeeRequestRepository.findById(1L)).thenReturn(Optional.of(pendingRequest));
+        when(userRepository.findByUsername("hrtest2")).thenReturn(Optional.of(hrUser));
+        when(employeeRequestRepository.save(any(EmployeeRequest.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        EmployeeRequest result = employeeRequestService.hrDecision(1L, "REJECTED", "no", "hrtest2");
+
+        assertThat(result.getStatus()).isEqualTo("REJECTED");
+        assertThat(result.getHrComment()).isEqualTo("no");
+        assertThat(result.getResolvedAt()).isNotNull();
     }
 
     // --- getters ---
