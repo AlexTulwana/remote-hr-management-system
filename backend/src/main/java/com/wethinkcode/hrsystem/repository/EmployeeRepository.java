@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSpecificationExecutor<Employee> {
 
@@ -20,9 +21,11 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSp
     List<SalaryAggregateProjection> aggregateSalaryByBranchDept();
 
     List<Employee> findByBranchId(Long branchId);
+    long countByBranchId(Long branchId);
 
     List<Employee> findByReportsToId(Long reportsToId);
     List<Employee> findByReportsToIsNull();
     List<Employee> findByBranchIsNull();
     boolean existsByEmployeeNumber(String employeeNumber);
+    Optional<Employee> findByEmployeeNumber(String employeeNumber);
 }
