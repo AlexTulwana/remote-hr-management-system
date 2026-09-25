@@ -1,5 +1,7 @@
 package com.wethinkcode.hrsystem.service;
 
+import com.wethinkcode.hrsystem.dto.BulkPayslipUploadResult;
+import com.wethinkcode.hrsystem.dto.PayslipSummary;
 import com.wethinkcode.hrsystem.model.Employee;
 import com.wethinkcode.hrsystem.model.Payslip;
 import com.wethinkcode.hrsystem.repository.EmployeeRepository;
@@ -15,8 +17,6 @@ import com.wethinkcode.hrsystem.security.CurrentUserService;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.beans.factory.annotation.Value;
 
-
-
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
@@ -24,11 +24,17 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class PayslipService {
+
+    private static final Pattern EMPLOYEE_NUMBER_PATTERN = Pattern.compile("(EMP-\\d+)", Pattern.CASE_INSENSITIVE);
 
     private final PayslipRepository payslipRepository;
     private final EmployeeRepository employeeRepository;
@@ -60,6 +66,39 @@ public class PayslipService {
         payslip.setFilePath(saveFile(file));
 
         return payslipRepository.save(payslip);
+    }
+
+    public List<BulkPayslipUploadResult> bulkUpload(String payPeriod, MultipartFile[] files) {
+        List<BulkPayslipUploadResult> results = new ArrayList<>();
+        for (MultipartFile file : files) {
+            String filename = file.getOriginalFilename();
+            Matcher matcher = EMPLOYEE_NUMBER_PATTERN.matcher(filename == null ? "" : filename);
+            if (!matcher.find()) {
+                results.add(BulkPayslipUploadResult.failure(filename, null,
+                        "No employee number found in filename"));
+                continue;
+            }
+            String employeeNumber = matcher.group(1).toUpperCase();
+            Optional<Employee> employeeOpt = employeeRepository.findByEmployeeNumber(employeeNumber);
+            if (employeeOpt.isEmpty()) {
+                results.add(BulkPayslipUploadResult.failure(filename, employeeNumber,
+                        "No employee found with number " + employeeNumber));
+                continue;
+            }
+            try {
+                Payslip payslip = upload(employeeOpt.get().getId(), payPeriod, file);
+                results.add(BulkPayslipUploadResult.success(filename, employeeNumber,
+                        PayslipSummary.from(payslip)));
+            } catch (Exception e) {
+                results.add(BulkPayslipUploadResult.failure(filename, employeeNumber,
+                        "Upload failed: " + e.getMessage()));
+            }
+        }
+        return results;
+    }
+
+    public List<Payslip> getAll() {
+        return payslipRepository.findAll();
     }
 
     public List<Payslip> getByEmployee(Long employeeId) {
@@ -124,6 +163,17 @@ public class PayslipService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to send payslip email: " + e.getMessage(), e);
         }
+    }
+
+    public void delete(Long payslipId) {
+        Payslip payslip = payslipRepository.findById(payslipId)
+                .orElseThrow(() -> new RuntimeException("Payslip not found"));
+        try {
+            Files.deleteIfExists(Paths.get(payslip.getFilePath()));
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to delete payslip file", e);
+        }
+        payslipRepository.delete(payslip);
     }
 
     private String saveFile(MultipartFile file) {
