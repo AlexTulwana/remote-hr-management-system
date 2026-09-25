@@ -3,6 +3,8 @@ package com.wethinkcode.hrsystem.service;
 import com.wethinkcode.hrsystem.dto.BranchRequest;
 import com.wethinkcode.hrsystem.model.Branch;
 import com.wethinkcode.hrsystem.repository.BranchRepository;
+import com.wethinkcode.hrsystem.repository.EmployeeRepository;
+import com.wethinkcode.hrsystem.repository.JobPostingRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +25,12 @@ class BranchServiceTest {
 
     @Mock
     private BranchRepository branchRepository;
+
+    @Mock
+    private EmployeeRepository employeeRepository;
+
+    @Mock
+    private JobPostingRepository jobPostingRepository;
 
     @InjectMocks
     private BranchService branchService;
@@ -111,9 +119,49 @@ class BranchServiceTest {
     }
 
     @Test
-    void delete_callsRepositoryDeleteById() {
+    void delete_noEmployeesOrJobPostings_callsRepositoryDeleteById() {
+        when(employeeRepository.countByBranchId(1L)).thenReturn(0L);
+        when(jobPostingRepository.countByBranchId(1L)).thenReturn(0L);
+
         branchService.delete(1L);
 
         verify(branchRepository).deleteById(1L);
+    }
+
+    @Test
+    void delete_branchHasEmployees_throwsAndDoesNotDelete() {
+        when(employeeRepository.countByBranchId(1L)).thenReturn(3L);
+        when(jobPostingRepository.countByBranchId(1L)).thenReturn(0L);
+
+        assertThatThrownBy(() -> branchService.delete(1L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("3 employees");
+
+        verify(branchRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void delete_branchHasJobPostings_throwsAndDoesNotDelete() {
+        when(employeeRepository.countByBranchId(1L)).thenReturn(0L);
+        when(jobPostingRepository.countByBranchId(1L)).thenReturn(1L);
+
+        assertThatThrownBy(() -> branchService.delete(1L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("1 job posting");
+
+        verify(branchRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void delete_branchHasBoth_throwsWithCombinedMessage() {
+        when(employeeRepository.countByBranchId(1L)).thenReturn(2L);
+        when(jobPostingRepository.countByBranchId(1L)).thenReturn(4L);
+
+        assertThatThrownBy(() -> branchService.delete(1L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("2 employees")
+                .hasMessageContaining("4 job postings");
+
+        verify(branchRepository, never()).deleteById(any());
     }
 }
