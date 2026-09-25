@@ -1,5 +1,6 @@
 package com.wethinkcode.hrsystem.controller;
 
+import com.wethinkcode.hrsystem.dto.BulkPayslipUploadResult;
 import com.wethinkcode.hrsystem.dto.PayslipSummary;
 import com.wethinkcode.hrsystem.service.PayslipService;
 import org.springframework.core.io.Resource;
@@ -23,6 +24,21 @@ public class PayslipController {
     public PayslipController(PayslipService payslipService) {
         this.payslipService = payslipService;
     }
+
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+    @GetMapping
+    public ResponseEntity<List<PayslipSummary>> getAll() {
+        return ResponseEntity.ok(payslipService.getAll().stream().map(PayslipSummary::from).toList());
+    }
+
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+    @PostMapping(value = "/bulk", consumes = "multipart/form-data")
+    public ResponseEntity<List<BulkPayslipUploadResult>> bulkUpload(
+            @RequestParam String payPeriod,
+            @RequestParam MultipartFile[] files) {
+        return ResponseEntity.ok(payslipService.bulkUpload(payPeriod, files));
+    }
+
     @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
     @PostMapping(value = "/{employeeId}", consumes = "multipart/form-data")
     public ResponseEntity<PayslipSummary> upload(
@@ -51,5 +67,12 @@ public class PayslipController {
     public ResponseEntity<Map<String, String>> emailToSelf(@PathVariable Long payslipId) {
         payslipService.emailToSelf(payslipId);
         return ResponseEntity.ok(Map.of("status", "sent"));
+    }
+
+    @PreAuthorize("hasRole('HR') or hasRole('ADMIN')")
+    @DeleteMapping("/{payslipId}")
+    public ResponseEntity<Void> delete(@PathVariable Long payslipId) {
+        payslipService.delete(payslipId);
+        return ResponseEntity.noContent().build();
     }
 }
