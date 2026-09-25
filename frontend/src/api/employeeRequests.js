@@ -21,3 +21,14 @@ export function managerDecideRequest(id, decision, comment) {
     body: JSON.stringify({ decision, comment }),
   });
 }
+
+export function getAllEmployeeRequests() {
+  return apiFetch('/api/employee-requests');
+}
+
+export function hrDecideRequest(id, decision, comment) {
+  return apiFetch(`/api/employee-requests/${id}/hr-decision`, {
+    method: 'PATCH',
+    body: JSON.stringify({ decision, comment }),
+  });
+}
