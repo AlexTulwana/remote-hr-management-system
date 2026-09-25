@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 @WebMvcTest(BranchController.class)
 @Import(com.wethinkcode.hrsystem.config.SecurityConfig.class)
@@ -136,5 +137,18 @@ class BranchControllerTest {
     void delete_hrRole_isAllowed() throws Exception {
         mockMvc.perform(delete("/api/branches/1"))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser(roles = "HR")
+    void delete_branchInUse_returnsBadRequestWithMessage() throws Exception {
+        org.mockito.Mockito.doThrow(new IllegalStateException(
+                "Cannot delete this branch: it still has 3 employees assigned to it"))
+                .when(branchService).delete(1L);
+
+        mockMvc.perform(delete("/api/branches/1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value(
+                        "Cannot delete this branch: it still has 3 employees assigned to it"));
     }
 }
