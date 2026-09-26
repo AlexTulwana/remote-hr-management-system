@@ -16,7 +16,8 @@ public record CurrentUserResponse(
         String employmentStatus,
         String contactDetails,
         String email,
-        Long branchId
+        Long branchId,
+        boolean hasProfilePicture
 ) {
     public static CurrentUserResponse from(User user) {
         Employee employee = user.getEmployee();
@@ -33,7 +34,8 @@ public record CurrentUserResponse(
                 employee != null ? employee.getEmploymentStatus() : null,
                 employee != null ? employee.getContactDetails() : null,
                 employee != null ? employee.getEmail() : null,
-                employee != null && employee.getBranch() != null ? employee.getBranch().getId() : null
+                employee != null && employee.getBranch() != null ? employee.getBranch().getId() : null,
+                employee != null && employee.getProfilePicturePath() != null
         );
     }
 }
