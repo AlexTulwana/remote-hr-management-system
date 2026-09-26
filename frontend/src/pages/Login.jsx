@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import ErrorInline from '../components/ErrorInline';
 import SegmentClock from '../components/SegmentClock';
+import LogoIcon from '../components/LogoIcon';
 
 const ROLE_HOME = {
   EMPLOYEE: '/employee/dashboard',
@@ -74,6 +75,10 @@ export default function Login() {
     <div className="min-h-screen bg-[#1a1a1a] flex justify-center items-start p-6">
       <div className="bg-[#0d0d0d] text-[#f2f2f0] rounded-xl px-4 pt-5 pb-8 relative w-[420px]">
         <SegmentClock className="absolute top-4 right-4" />
+        <div className="flex flex-col items-center gap-1 pt-1 pb-2">
+          <LogoIcon size={32} primaryColor="#f2f2f0" mutedColor="#6b6a65" surfaceColor="#161616" />
+          <span className="text-[12px] font-medium tracking-wide text-[#a8a6a0]">WorkFlowTech</span>
+        </div>
         <div className="flex justify-center">
           <div className="relative w-[380px] h-[380px]">
             <CometRing />
