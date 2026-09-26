@@ -13,6 +13,7 @@ public class EmployeeSummary {
     private String department;
     private String employmentStatus;
     private String branchName;
+    private boolean hasProfilePicture;
 
     public static EmployeeSummary from(com.wethinkcode.hrsystem.model.Employee employee) {
         return new EmployeeSummary(
@@ -22,7 +23,8 @@ public class EmployeeSummary {
                 employee.getPosition(),
                 employee.getDepartment(),
                 employee.getEmploymentStatus(),
-                employee.getBranch() != null ? employee.getBranch().getName() : null
+                employee.getBranch() != null ? employee.getBranch().getName() : null,
+                employee.getProfilePicturePath() != null
         );
     }
 }
