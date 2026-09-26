@@ -33,6 +33,7 @@ public class Employee {
     private LocalDate resignationDate;
     private LocalDate terminationDate;
     private String email;
+    private String profilePicturePath;
 
     @ManyToOne
     @JoinColumn(name = "reports_to_id")
