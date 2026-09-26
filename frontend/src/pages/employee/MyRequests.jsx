@@ -115,7 +115,7 @@ export default function MyRequests() {
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               placeholder="Describe what you need"
-              className="w-full rounded-lg border border-border-strong bg-surface-1 text-text-primary p-2.5 text-[13px] focus:outline-none focus:border-text-secondary"
+              className="w-full rounded-lg border border-border-strong bg-surface-2 text-text-primary p-2.5 text-[13px] focus:outline-none focus:border-text-secondary"
             />
           </div>
           {submitError ? <ErrorInline message={submitError} /> : null}
