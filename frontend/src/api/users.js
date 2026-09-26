@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, apiFetchFormData } from './client';
 
 export function getMe() {
   return apiFetch('/api/users/me');
@@ -16,4 +16,14 @@ export function updateMyContact({ contactDetails, email }) {
     method: 'PUT',
     body: JSON.stringify({ contactDetails, email }),
   });
+}
+
+export function uploadProfilePicture(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  return apiFetchFormData('/api/users/me/profile-picture', formData, { method: 'POST' });
+}
+
+export function profilePictureUrl(employeeId) {
+  return `/api/employees/${employeeId}/profile-picture`;
 }
