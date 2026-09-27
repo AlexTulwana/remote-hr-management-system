@@ -166,7 +166,7 @@ function Composer({ onSent }) {
                 onClick={() => pickRecipient(person)}
                 className="w-full text-left px-3 py-2 hover:bg-surface-1 transition-colors duration-200 flex items-center gap-2.5"
               >
-                <Avatar initials={initialsOf(person.fullName)} size="sm" />
+                <Avatar initials={initialsOf(person.fullName)} employeeId={person.employeeId} hasPicture={person.hasProfilePicture} size="sm" />
                 <div>
                   <p className="text-[13px]">{person.fullName}</p>
                   <p className="text-[11px] text-text-muted">
@@ -270,6 +270,8 @@ export default function Messages() {
           messages.map((m) => {
             const isOutgoing = m.senderId === user.userId;
             const otherName = isOutgoing ? m.recipientName : m.senderName;
+            const otherEmployeeId = isOutgoing ? m.recipientEmployeeId : m.senderEmployeeId;
+            const otherHasPicture = isOutgoing ? m.recipientHasProfilePicture : m.senderHasProfilePicture;
             return (
               <div
                 key={m.id}
@@ -287,7 +289,7 @@ export default function Messages() {
                   expandedId === m.id ? 'bg-surface-1' : '',
                 ].join(' ')}
               >
-                <Avatar initials={initialsOf(otherName)} size="sm" />
+                <Avatar initials={initialsOf(otherName)} employeeId={otherEmployeeId} hasPicture={otherHasPicture} size="sm" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-[13px]">
