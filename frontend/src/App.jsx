@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import JobApply from './pages/public/JobApply';
 import SetPassword from './pages/public/SetPassword';
+import ForgotPassword from './pages/public/ForgotPassword';
 import Profile from './pages/Profile';
 import Messages from './pages/Messages';
 import Announcements from './pages/Announcements';
@@ -99,6 +100,8 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/apply/:id" element={<JobApply />} />
       <Route path="/set-password" element={<SetPassword />} />
+      <Route path="/reset-password" element={<SetPassword />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route
         path="/employee/dashboard"
         element={
