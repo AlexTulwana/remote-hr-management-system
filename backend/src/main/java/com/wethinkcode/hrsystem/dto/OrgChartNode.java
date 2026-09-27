@@ -14,4 +14,5 @@ public class OrgChartNode {
     private String department;
     private String branchName;
     private List<OrgChartNode> directReports;
+    private boolean hasProfilePicture;
 }
