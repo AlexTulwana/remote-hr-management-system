@@ -1,6 +1,8 @@
 package com.wethinkcode.hrsystem.service;
 
+import com.wethinkcode.hrsystem.config.RabbitMQConfig;
 import com.wethinkcode.hrsystem.dto.ForgotPasswordRequest;
+import com.wethinkcode.hrsystem.dto.PasswordResetEvent;
 import com.wethinkcode.hrsystem.dto.LoginRequest;
 import com.wethinkcode.hrsystem.dto.RegisterRequest;
 import com.wethinkcode.hrsystem.dto.ResetPasswordRequest;
@@ -8,6 +10,8 @@ import com.wethinkcode.hrsystem.model.User;
 import com.wethinkcode.hrsystem.repository.UserRepository;
 import com.wethinkcode.hrsystem.security.CurrentUserService;
 import com.wethinkcode.hrsystem.security.JwtUtil;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,13 +29,18 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final CurrentUserService currentUserService;
+    private final RabbitTemplate rabbitTemplate;
+
+    @Value("${app.frontend-base-url:http://localhost:5173}")
+    private String frontendBaseUrl = "http://localhost:5173";
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil,
-                       CurrentUserService currentUserService) {
+                       CurrentUserService currentUserService, RabbitTemplate rabbitTemplate) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.currentUserService = currentUserService;
+        this.rabbitTemplate = rabbitTemplate;
     }
 
     public User register(RegisterRequest request) {
@@ -84,13 +93,20 @@ public class AuthService {
         User user = findUserByAnyIdentifier(request.getUsername());
 
         String token = UUID.randomUUID().toString();
+        LocalDateTime expiry = LocalDateTime.now().plusMinutes(15);
         user.setResetToken(token);
-        user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(15));
+        user.setResetTokenExpiry(expiry);
         userRepository.save(user);
 
-        // Placeholder — Phase 16 (Notifications) will replace this with a real email.
-        System.out.println("PASSWORD RESET REQUESTED for " + user.getUsername()
-                + ". Reset token (valid 15 min): " + token);
+        String email = user.getEmployee() != null ? user.getEmployee().getEmail() : null;
+        if (email != null && !email.isBlank()) {
+            String fullName = user.getEmployee() != null ? user.getEmployee().getFullName() : user.getUsername();
+            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, "password.reset",
+                    new PasswordResetEvent(user.getUsername(), fullName, email, token, expiry));
+        } else {
+            System.out.println("PASSWORD RESET REQUESTED for " + user.getUsername()
+                    + " but no email on file. Reset token (valid 15 min): " + token);
+        }
 
         return "If the username exists, a reset token has been generated.";
     }
