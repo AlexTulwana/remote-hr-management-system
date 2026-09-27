@@ -76,7 +76,8 @@ public class EmployeeDirectoryService {
                 employee.getPosition(),
                 employee.getDepartment(),
                 employee.getBranch() != null ? employee.getBranch().getName() : null,
-                childNodes
+                childNodes,
+                employee.getProfilePicturePath() != null
         );
     }
 }
