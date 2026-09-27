@@ -26,7 +26,7 @@ function OrgNode({ node, depth }) {
   return (
     <div>
       <div className="flex items-center gap-2.5 py-1.5" style={{ paddingLeft: depth * 22 }}>
-        <Avatar initials={initialsOf(node.fullName)} size="sm" />
+        <Avatar initials={initialsOf(node.fullName)} employeeId={node.employeeId} hasPicture={node.hasProfilePicture} size="sm" />
         <div>
           <p className="text-[13px]">{node.fullName}</p>
           <p className="text-[11px] text-text-muted">
@@ -203,7 +203,7 @@ export default function EmployeeDirectory() {
                 ].join(' ')}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <Avatar initials={initialsOf(m.fullName)} size="sm" />
+                  <Avatar initials={initialsOf(m.fullName)} employeeId={m.id} hasPicture={m.hasProfilePicture} size="sm" />
                   <div className="min-w-0">
                     <p className="text-[13px] font-medium">{m.fullName}</p>
                     <p className="text-[12px] text-text-secondary">
