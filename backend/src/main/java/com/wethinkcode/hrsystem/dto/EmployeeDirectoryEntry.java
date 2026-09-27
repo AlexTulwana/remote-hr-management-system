@@ -15,6 +15,7 @@ public class EmployeeDirectoryEntry {
     private String branchName;
     private String contactDetails;
     private String reportsToName; // null if no manager set
+    private boolean hasProfilePicture;
 
     public static EmployeeDirectoryEntry from(com.wethinkcode.hrsystem.model.Employee e) {
         return new EmployeeDirectoryEntry(
@@ -26,7 +27,8 @@ public class EmployeeDirectoryEntry {
                 e.getEmploymentStatus(),
                 e.getBranch() != null ? e.getBranch().getName() : null,
                 e.getContactDetails(),
-                e.getReportsTo() != null ? e.getReportsTo().getFullName() : null
+                e.getReportsTo() != null ? e.getReportsTo().getFullName() : null,
+                e.getProfilePicturePath() != null
         );
     }
 }
