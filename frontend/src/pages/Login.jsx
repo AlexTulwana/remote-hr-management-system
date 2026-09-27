@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import ErrorInline from '../components/ErrorInline';
 import SegmentClock from '../components/SegmentClock';
@@ -105,6 +106,9 @@ export default function Login() {
               >
                 {submitting ? 'Logging in…' : 'Log in'}
               </button>
+              <Link to="/forgot-password" className="text-[12.5px] text-[#a8a6a0] underline mt-1">
+                Forgot password?
+              </Link>
             </form>
           </div>
         </div>
