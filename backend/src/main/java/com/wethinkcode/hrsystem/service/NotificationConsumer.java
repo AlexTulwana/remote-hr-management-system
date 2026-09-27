@@ -4,6 +4,7 @@ import com.wethinkcode.hrsystem.dto.ApplicationOutcomeChangedEvent;
 import com.wethinkcode.hrsystem.dto.EmployeeInviteEvent;
 import com.wethinkcode.hrsystem.dto.HearingScheduledEvent;
 import com.wethinkcode.hrsystem.dto.InterviewScheduledEvent;
+import com.wethinkcode.hrsystem.dto.PasswordResetEvent;
 import com.wethinkcode.hrsystem.config.RabbitMQConfig;
 import com.wethinkcode.hrsystem.model.JobPosting;
 import com.wethinkcode.hrsystem.repository.JobPostingRepository;
@@ -126,6 +127,32 @@ public class NotificationConsumer {
             System.out.println("CONSUMER: outcome email sent successfully to " + e.candidateEmail());
         } catch (Exception ex) {
             System.out.println("CONSUMER: FAILED to send outcome email - " + ex.getClass().getName() + ": " + ex.getMessage());
+            ex.printStackTrace();
+        }
+    }
+
+    @RabbitHandler
+    public void handlePasswordReset(PasswordResetEvent e) {
+        System.out.println("CONSUMER: handling PasswordResetEvent for " + e.username());
+        try {
+            if (e.email() == null || e.email().isBlank()) {
+                System.out.println("Skipping reset email - no address for user " + e.username());
+                return;
+            }
+            String link = frontendBaseUrl + "/reset-password?token=" + e.token();
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(e.email());
+            message.setSubject("Reset your password");
+            message.setText("Dear " + e.fullName() + ",\n\n"
+                    + "A password reset was requested for your account.\n\n"
+                    + "Reset your password here (link valid until " + formatDateTime(e.expiresAt()) + "):\n"
+                    + link + "\n\n"
+                    + "If you did not request this, you can safely ignore this email.\n\n"
+                    + "Regards,\nHR Team");
+            mailSender.send(message);
+            System.out.println("CONSUMER: reset email sent successfully to " + e.email());
+        } catch (Exception ex) {
+            System.out.println("CONSUMER: FAILED to send reset email - " + ex.getClass().getName() + ": " + ex.getMessage());
             ex.printStackTrace();
         }
     }
