@@ -6,3 +6,10 @@ export function resetPassword(token, newPassword) {
     body: JSON.stringify({ token, newPassword }),
   });
 }
+
+export function forgotPassword(username) {
+  return apiFetch('/api/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ username }),
+  });
+}
