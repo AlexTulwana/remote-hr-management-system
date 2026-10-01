@@ -1,16 +1,33 @@
-# React + Vite
+# WorkFlowTech - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React (Vite) + Tailwind CSS frontend for the WorkFlowTech HR platform.
 
-Currently, two official plugins are available:
+See the root README (../README.md) for the full project overview, features, and backend setup.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Setup
 
-## React Compiler
+npm install
+npm run dev
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Runs on http://localhost:5173 (or next free port if taken). Expects the backend API running on http://localhost:8080.
 
-## Expanding the Oxlint configuration
+## Other commands
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+npm run build     production build
+npm run lint       oxlint
+
+## Structure
+
+src/
+  api/         fetch wrappers per backend resource
+  auth/         AuthContext, ThemeContext, ProtectedRoute
+  components/    shared UI (Sidebar, TopBar, Avatar, Card, Button, ...)
+  pages/         one folder per role (employee/, manager/, hr/, executive/) plus shared pages
+  App.jsx        routes and role-based nav
+
+## Design system
+
+- Black / white / grey palette, no accent colors (green = success, red = urgent only)
+- Public Sans font
+- Dark mode via ThemeContext (data-theme on html)
+- Collapsible sidebar (state persisted in localStorage)
