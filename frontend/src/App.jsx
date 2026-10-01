@@ -38,53 +38,58 @@ import ReportConcern from './pages/ReportConcern';
 import AppLayout from './components/AppLayout';
 import ProtectedRoute from './auth/ProtectedRoute';
 import { useAuth } from './auth/AuthContext';
+import {
+  User, LayoutDashboard, CalendarDays, Clock, ClipboardList, Wallet, Star,
+  Users, UserCheck, LogOut, LogIn, FileWarning, Gavel, AlertTriangle,
+  Briefcase, Building2, TrendingUp, MessageSquare, Megaphone, FolderOpen, Flag,
+} from 'lucide-react';
 
 function navItemsFor(role) {
-  const pinned = [{ to: '/profile', label: 'Profile' }];
+  const pinned = [{ to: '/profile', label: 'Profile', icon: User }];
   const rest = [];
 
   if (role === 'EMPLOYEE') {
-    rest.push({ to: '/employee/dashboard', label: 'Dashboard' });
-    rest.push({ to: '/employee/leave-requests', label: 'Leave Requests' });
-    rest.push({ to: '/employee/attendance', label: 'Attendance' });
-    rest.push({ to: '/employee/my-requests', label: 'My Requests' });
-    rest.push({ to: '/employee/payslips', label: 'Payslips' });
-    rest.push({ to: '/employee/performance-reviews', label: 'Performance Reviews' });
+    rest.push({ to: '/employee/dashboard', label: 'Dashboard', icon: LayoutDashboard });
+    rest.push({ to: '/employee/leave-requests', label: 'Leave Requests', icon: CalendarDays });
+    rest.push({ to: '/employee/attendance', label: 'Attendance', icon: Clock });
+    rest.push({ to: '/employee/my-requests', label: 'My Requests', icon: ClipboardList });
+    rest.push({ to: '/employee/payslips', label: 'Payslips', icon: Wallet });
+    rest.push({ to: '/employee/performance-reviews', label: 'Performance Reviews', icon: Star });
   }
   if (role === 'MANAGER') {
-    rest.push({ to: '/manager/dashboard', label: 'Dashboard' });
-    rest.push({ to: '/manager/my-team', label: 'My Team' });
-    rest.push({ to: '/manager/leave-approvals', label: 'Leave Approvals' });
-    rest.push({ to: '/manager/team-requests', label: 'Team Requests' });
-    rest.push({ to: '/manager/disciplinary-cases', label: 'Disciplinary Cases' });
-    rest.push({ to: '/manager/performance-reviews', label: 'Performance Reviews' });
-    rest.push({ to: '/manager/my-requests', label: 'My Requests' });
+    rest.push({ to: '/manager/dashboard', label: 'Dashboard', icon: LayoutDashboard });
+    rest.push({ to: '/manager/my-team', label: 'My Team', icon: Users });
+    rest.push({ to: '/manager/leave-approvals', label: 'Leave Approvals', icon: UserCheck });
+    rest.push({ to: '/manager/team-requests', label: 'Team Requests', icon: ClipboardList });
+    rest.push({ to: '/manager/disciplinary-cases', label: 'Disciplinary Cases', icon: FileWarning });
+    rest.push({ to: '/manager/performance-reviews', label: 'Performance Reviews', icon: Star });
+    rest.push({ to: '/manager/my-requests', label: 'My Requests', icon: ClipboardList });
   }
   if (role === 'HR' || role === 'ADMIN') {
-    rest.push({ to: '/hr/employee-directory', label: 'Employee Directory' });
-    rest.push({ to: '/hr/recruitment', label: 'Recruitment' });
-    rest.push({ to: '/hr/onboarding', label: 'Onboarding' });
-    rest.push({ to: '/hr/offboarding', label: 'Offboarding' });
-    rest.push({ to: '/hr/payslip-management', label: 'Payslip Management' });
-    rest.push({ to: '/hr/leave-management', label: 'Leave Management' });
-    rest.push({ to: '/hr/disciplinary-cases', label: 'Disciplinary Cases' });
-    rest.push({ to: '/hr/hearings', label: 'Hearings' });
-    rest.push({ to: '/hr/escalations', label: 'Escalations' });
-    rest.push({ to: '/hr/performance-reviews', label: 'Performance Reviews' });
-    rest.push({ to: '/hr/employee-requests', label: 'Employee Requests' });
-    rest.push({ to: '/hr/my-requests', label: 'My Requests' });
-    rest.push({ to: '/hr/branches', label: 'Branches' });
+    rest.push({ to: '/hr/employee-directory', label: 'Employee Directory', icon: Users });
+    rest.push({ to: '/hr/recruitment', label: 'Recruitment', icon: Briefcase });
+    rest.push({ to: '/hr/onboarding', label: 'Onboarding', icon: LogIn });
+    rest.push({ to: '/hr/offboarding', label: 'Offboarding', icon: LogOut });
+    rest.push({ to: '/hr/payslip-management', label: 'Payslip Management', icon: Wallet });
+    rest.push({ to: '/hr/leave-management', label: 'Leave Management', icon: CalendarDays });
+    rest.push({ to: '/hr/disciplinary-cases', label: 'Disciplinary Cases', icon: FileWarning });
+    rest.push({ to: '/hr/hearings', label: 'Hearings', icon: Gavel });
+    rest.push({ to: '/hr/escalations', label: 'Escalations', icon: AlertTriangle });
+    rest.push({ to: '/hr/performance-reviews', label: 'Performance Reviews', icon: Star });
+    rest.push({ to: '/hr/employee-requests', label: 'Employee Requests', icon: ClipboardList });
+    rest.push({ to: '/hr/my-requests', label: 'My Requests', icon: ClipboardList });
+    rest.push({ to: '/hr/branches', label: 'Branches', icon: Building2 });
   }
   if (role === 'ADMIN') {
-    rest.push({ to: '/executive/overview', label: 'Executive Overview' });
-    rest.push({ to: '/executive/turnover-analytics', label: 'Turnover & Analytics' });
+    rest.push({ to: '/executive/overview', label: 'Executive Overview', icon: LayoutDashboard });
+    rest.push({ to: '/executive/turnover-analytics', label: 'Turnover & Analytics', icon: TrendingUp });
   }
   rest.push(
-    { to: '/report-concern', label: 'Report a Concern' },
-    { to: '/messages', label: 'Messages' },
-    { to: '/announcements', label: 'Announcements' },
-    { to: '/calendar', label: 'Calendar' },
-    { to: '/documents', label: 'Documents' },
+    { to: '/report-concern', label: 'Report a Concern', icon: Flag },
+    { to: '/messages', label: 'Messages', icon: MessageSquare },
+    { to: '/announcements', label: 'Announcements', icon: Megaphone },
+    { to: '/calendar', label: 'Calendar', icon: CalendarDays },
+    { to: '/documents', label: 'Documents', icon: FolderOpen },
   );
 
   rest.sort((a, b) => a.label.localeCompare(b.label));
