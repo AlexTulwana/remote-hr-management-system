@@ -17,7 +17,7 @@ const TYPE_META = {
   ANNOUNCEMENT: { label: 'Announcement', variant: 'info' },
 };
 
-const DOT_COLORS = {
+const BAR_COLORS = {
   CALENDAR_EVENT: 'var(--color-text-muted)',
   LEAVE: 'var(--color-warning-text)',
   INTERVIEW: 'var(--color-info-text)',
@@ -28,6 +28,8 @@ const DOT_COLORS = {
 };
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_MS = 24 * 60 * 60 * 1000;
+const BAR_ROW_HEIGHT = 20;
 
 function toDateKey(date) {
   const y = date.getFullYear();
@@ -73,6 +75,53 @@ function getWeekRange(date) {
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
   return { start, end };
+}
+
+// Assigns each event a horizontal "lane" within a week so multi-day events
+// render as a single spanning bar (Google Calendar style) instead of per-day dots.
+function computeWeekBars(weekDays, events) {
+  const weekStart = weekDays[0];
+  const weekEnd = weekDays[6];
+
+  const overlapping = events
+    .map((item) => {
+      const evStart = parseDateKey(item.date);
+      const evEnd = item.endDate ? parseDateKey(item.endDate) : evStart;
+      return { item, evStart, evEnd };
+    })
+    .filter(({ evStart, evEnd }) => evEnd >= weekStart && evStart <= weekEnd)
+    .sort((a, b) => {
+      const startDiff = a.evStart - b.evStart;
+      if (startDiff !== 0) return startDiff;
+      return (b.evEnd - b.evStart) - (a.evEnd - a.evStart);
+    });
+
+  const laneEnds = [];
+  const placed = overlapping.map(({ item, evStart, evEnd }) => {
+    const clampedStart = evStart < weekStart ? weekStart : evStart;
+    const clampedEnd = evEnd > weekEnd ? weekEnd : evEnd;
+    const startCol = Math.round((clampedStart - weekStart) / DAY_MS);
+    const endCol = Math.round((clampedEnd - weekStart) / DAY_MS);
+
+    let lane = laneEnds.findIndex((end) => end < startCol);
+    if (lane === -1) {
+      lane = laneEnds.length;
+      laneEnds.push(endCol);
+    } else {
+      laneEnds[lane] = endCol;
+    }
+
+    return {
+      item,
+      startCol,
+      endCol,
+      lane,
+      continuesBefore: evStart < weekStart,
+      continuesAfter: evEnd > weekEnd,
+    };
+  });
+
+  return { placed, laneCount: laneEnds.length };
 }
 
 export default function Calendar() {
@@ -157,6 +206,15 @@ export default function Calendar() {
 
   const todayKey = toDateKey(new Date());
 
+  const weeks = useMemo(() => {
+    if (filterMode === 'week') return [weekGridDays];
+    const rows = [];
+    for (let i = 0; i < monthGridDays.length; i += 7) {
+      rows.push(monthGridDays.slice(i, i + 7));
+    }
+    return rows;
+  }, [filterMode, monthGridDays, weekGridDays]);
+
   const agendaEntries = useMemo(() => {
     let keys;
     if (selectedDateKey) {
@@ -184,6 +242,11 @@ export default function Calendar() {
     setMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1));
   }
 
+  function handleToday() {
+    setSelectedDateKey(null);
+    jumpToCurrentMonth();
+  }
+
   function handleFilterChange(mode) {
     setSelectedDateKey(null);
     setFilterMode(mode);
@@ -207,45 +270,73 @@ export default function Calendar() {
       ? `Week of ${formatShortDate(weekGridDays[0])} \u2013 ${formatShortDate(weekGridDays[6])}`
       : formatMonthLabel(monthCursor);
 
-  function renderDayCell(date) {
-    const key = toDateKey(date);
-    const inMonth = filterMode === 'month' ? date.getMonth() === monthCursor.getMonth() : true;
-    const dayEvents = eventsByDay.get(key) || [];
-    const isSelected = selectedDateKey === key;
-    const isToday = key === todayKey;
+  function renderWeek(weekDays, weekIndex) {
+    const { placed, laneCount } = computeWeekBars(weekDays, events);
+    const barsAreaHeight = Math.max(laneCount, 1) * BAR_ROW_HEIGHT;
+
     return (
-      <button
-        key={key}
-        onClick={() => handleDayClick(key)}
-        className={[
-          'aspect-square rounded-lg p-1.5 flex flex-col items-start text-left cursor-pointer transition-colors',
-          isToday ? 'bg-surface-1' : inMonth ? 'bg-surface-2' : 'bg-surface-0',
-          isSelected ? 'border border-text-primary' : 'border border-transparent',
-        ].join(' ')}
-      >
-        <span
-          className={[
-            'text-[12px] w-5 h-5 flex items-center justify-center rounded-full',
-            isToday
-              ? 'bg-text-primary text-surface-2 font-semibold'
-              : inMonth ? 'text-text-primary' : 'text-text-muted',
-          ].join(' ')}
-        >
-          {date.getDate()}
-        </span>
-        <div className="flex flex-wrap gap-0.5 mt-auto">
-          {dayEvents.slice(0, 3).map((item, i) => (
-            <span
-              key={`${item.sourceType}-${item.sourceId}-${i}`}
-              className="w-1.5 h-1.5 rounded-full"
-              style={{ background: DOT_COLORS[item.sourceType] || 'var(--color-text-muted)' }}
-            />
-          ))}
-          {dayEvents.length > 3 ? (
-            <span className="text-[9px] text-text-muted leading-none">+{dayEvents.length - 3}</span>
-          ) : null}
+      <div key={`week-${weekIndex}`} className="mb-2">
+        <div className="grid grid-cols-7 gap-1.5">
+          {weekDays.map((date) => {
+            const key = toDateKey(date);
+            const inMonth = filterMode === 'month' ? date.getMonth() === monthCursor.getMonth() : true;
+            const isSelected = selectedDateKey === key;
+            const isToday = key === todayKey;
+            return (
+              <button
+                key={key}
+                onClick={() => handleDayClick(key)}
+                className={[
+                  'rounded-t-lg pt-1 px-1.5 flex justify-start text-left cursor-pointer transition-colors',
+                  isToday ? 'bg-surface-1' : inMonth ? 'bg-surface-2' : 'bg-surface-0',
+                  isSelected ? 'border border-text-primary border-b-0' : 'border border-transparent',
+                ].join(' ')}
+              >
+                <span
+                  className={[
+                    'text-[12px] w-5 h-5 flex items-center justify-center rounded-full',
+                    isToday
+                      ? 'bg-text-primary text-surface-2 font-semibold'
+                      : inMonth ? 'text-text-primary' : 'text-text-muted',
+                  ].join(' ')}
+                >
+                  {date.getDate()}
+                </span>
+              </button>
+            );
+          })}
         </div>
-      </button>
+
+        <div
+          className="grid grid-cols-7 gap-x-1.5 gap-y-0.5 px-0"
+          style={{ minHeight: barsAreaHeight, gridAutoRows: `${BAR_ROW_HEIGHT - 2}px` }}
+        >
+          {placed.map(({ item, startCol, endCol, lane, continuesBefore, continuesAfter }, i) => {
+            return (
+              <button
+                key={`${item.sourceType}-${item.sourceId}-${weekIndex}-${i}`}
+                onClick={() => handleDayClick(item.date)}
+                title={item.title}
+                className="text-[10px] text-left text-white truncate px-1.5 flex items-center"
+                style={{
+                  gridColumn: `${startCol + 1} / ${endCol + 2}`,
+                  gridRow: lane + 1,
+                  height: `${BAR_ROW_HEIGHT - 2}px`,
+                  background: BAR_COLORS[item.sourceType] || 'var(--color-text-muted)',
+                  borderTopLeftRadius: continuesBefore ? 0 : 4,
+                  borderBottomLeftRadius: continuesBefore ? 0 : 4,
+                  borderTopRightRadius: continuesAfter ? 0 : 4,
+                  borderBottomRightRadius: continuesAfter ? 0 : 4,
+                }}
+              >
+                {continuesBefore ? '\u2039 ' : ''}
+                {item.title}
+                {continuesAfter ? ' \u203a' : ''}
+              </button>
+            );
+          })}
+        </div>
+      </div>
     );
   }
 
@@ -254,6 +345,7 @@ export default function Calendar() {
       <div className="flex items-center justify-between mb-5">
         <p className="text-[20px] font-medium">Calendar</p>
         <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={handleToday}>Today</Button>
           <Button variant="secondary" onClick={() => goToMonth(-1)}>&larr;</Button>
           <select
             value={filterMode}
@@ -279,14 +371,14 @@ export default function Calendar() {
         <div className={fetching ? 'opacity-50 pointer-events-none transition-opacity' : 'transition-opacity'}>
           <Card>
             <p className="text-[15px] font-medium mb-3">{gridTitle}</p>
-            <div className="grid grid-cols-7 gap-1.5">
+            <div className="grid grid-cols-7 gap-1.5 mb-1">
               {WEEKDAY_LABELS.map((label) => (
                 <div key={label} className="text-[11px] text-text-muted text-center py-1">
                   {label}
                 </div>
               ))}
-              {(filterMode === 'week' ? weekGridDays : monthGridDays).map(renderDayCell)}
             </div>
+            {weeks.map((weekDays, i) => renderWeek(weekDays, i))}
           </Card>
 
           <p className="text-[13px] font-medium text-text-secondary mt-5 mb-2.5">{agendaHeading}</p>
